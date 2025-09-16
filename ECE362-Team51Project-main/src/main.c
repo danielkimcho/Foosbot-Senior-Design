@@ -7,7 +7,8 @@
  ******************************************************************************
 */
 
-#include "stm32f0xx.h"
+//#include "stm32f0xx.h"
+#include "stm32f091xc.h" //added instead of above include
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
