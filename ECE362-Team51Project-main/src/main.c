@@ -7,6 +7,9 @@
  ******************************************************************************
 */
 
+//added "${workspaceFolder}/.pio/packages/framework-cmsis/Device/ST/STM32F0xx/Include" to includePath in c_cpp_properties.json
+//added "STM32F091" to defines in c_cpp_properties.json
+
 //#include "stm32f0xx.h"
 #include "stm32f091xc.h" //added instead of above include
 #include <string.h>

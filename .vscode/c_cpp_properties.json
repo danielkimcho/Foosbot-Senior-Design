@@ -3,9 +3,11 @@
         {
             "name": "Mac",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/.pio/packages/framework-cmsis/Device/ST/STM32F0xx/Include"
+
             ],
-            "defines": [],
+            "defines": ["STM32F091"],
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c17",
             "cppStandard": "c++14",
