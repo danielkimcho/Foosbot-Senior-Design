@@ -10,8 +10,8 @@
 //added "${workspaceFolder}/.pio/packages/framework-cmsis/Device/ST/STM32F0xx/Include" to includePath in c_cpp_properties.json
 //added "STM32F091" to defines in c_cpp_properties.json
 
-//#include "stm32f0xx.h"
-#include "stm32f091xc.h" //added instead of above include
+#include "stm32f0xx.h"
+//#include "stm32f091xc.h" //added instead of above include
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1619,3 +1619,29 @@ const char font[] = {
 
 
 //ACTUAL CODE STARTS HERE
+
+
+//===========================================================================
+// Configure All Ports
+//===========================================================================
+void enable_ports(void) {
+   RCC->AHBENR |= RCC_AHBENR_GPIOCEN; 
+
+   //enable PC1-PC3 for input and PC4-PC7 and PC0 for output
+   GPIOC->MODER &= ~0x0000ffff;
+   GPIOC->MODER |= 0x00005501;
+
+   //simulate pull down resistors for PC0-PC3
+   //also have mechanical pull down resistors in place just in case
+   GPIOC->PUPDR &= ~0x000000ff;
+   GPIOC->PUPDR |= 0x000000a8;
+
+}
+
+
+
+
+int main(void) {
+
+   return 0;
+}
