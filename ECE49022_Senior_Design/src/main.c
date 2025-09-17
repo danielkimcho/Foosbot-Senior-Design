@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "commands.h"
+#include <stdbool.h>
 
 void nano_wait(unsigned int);
 //void game(void);
@@ -1631,10 +1632,9 @@ void enable_ports(void) {
    //enable PC0 for analog input and PC1-PC8 for output
    GPIOC->MODER &= ~0x0003ffff;
    GPIOC->MODER |= 0x00015557;
+}
 
-   //configure in ADC register
-   //GPIOx_AFR H or L //analog mode
-
+void init_adc(void) {
    RCC->APB2ENR |= RCC_APB2ENR_ADCEN; //ADC interface clock enable
 
    ADC1->CR |= ADC_CR_ADCAL; //start ADC callibration
@@ -1643,8 +1643,6 @@ void enable_ports(void) {
    }
 
    ADC1->CR |= ADC_CR_ADEN; //enable ADC
-
-   //ADC1->ISR |= ADC_ISR_ADRDY; //declaring that system is ready for ADC conversion
 
    while (!(ADC1->ISR & ADC_ISR_ADRDY)) { //wait until ardy has been set (goes high)
    }
@@ -1660,33 +1658,51 @@ uint16_t read_adc(void) {
     return ADC1->DR;
 }
 
-volatile uint8_t goals_detected = 0;
-volatile uint8_t consecutive_detections = 0;
-volatile uint8_t game_won = 0;
+volatile uint8_t consecutive_lows = 0; //number of times/ms in a row that the ball was detected
+volatile uint8_t consecutive_highs = 0; //number of times/ms in a row that the ball was NOT detected
+
+volatile uint16_t lockout_ticks = 0; //number of ms after score that interrupt waits before checking for score again
+volatile bool is_rearmed = true; //has a high/no ball been detected for at least 20 times/ms in a row since last score
+
+volatile uint8_t goals_detected = 0; //how many goals have been scored
+volatile bool is_game_done = false; //is the game finished
+
 
 void TIM2_IRQHandler(void) {
    //Acknowledge the interrupt by clearing the interrupt flag
    TIM2->SR &= ~TIM_SR_UIF;
 
+   if (lockout_ticks > 0) {
+      lockout_ticks = lockout_ticks - 1;
+      return;
+   }
+
    uint16_t pc0 = read_adc();
    ADC1->CR |= ADC_CR_ADSTART; //start next ADC conversion immediately for maximum time
 
    if (pc0 < THRESHOLD) { //low detected
-      consecutive_detections = consecutive_detections + 1;
+      consecutive_lows = consecutive_lows + 1;
+      consecutive_highs = 0;
+      if (consecutive_lows > 19 && is_rearmed) { //low/ball detected for 20 ms straight
+         goals_detected = goals_detected + 1;
+         consecutive_lows = 0;
+         consecutive_highs = 0;
+         lockout_ticks = 200; //wait lockout_ticks # ms before checking for goals again
+         is_rearmed = false;
+         GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1); //output to PC1-PC8 for display
+      }
    }
-   else {
-      consecutive_detections = 0;
+   else { //high detected
+      consecutive_lows = 0;
+      consecutive_highs = consecutive_highs + 1;
+      if (consecutive_highs > 19) { //high/no ball detected for 20ms straight
+         is_rearmed = true;
+      }
    }
 
-   if (consecutive_detections > 19) { //low detected for 20 ms straight
-      goals_detected = goals_detected + 1;
-      consecutive_detections = 0;
-      GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1);
-   }
-
-   if (goals_detected > 9) {
+   if (goals_detected > 9) { //check if game is finished
       goals_detected = 0;
-      game_won = 1;
+      is_game_done = true;
    }
 }
 
@@ -1708,6 +1724,7 @@ void init_tim2(void) {
 int main(void) {
 
    enable_ports();
+   init_adc();
    init_tim2();
 
    return EXIT_SUCCESS;
