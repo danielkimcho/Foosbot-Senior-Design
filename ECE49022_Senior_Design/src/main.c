@@ -1681,7 +1681,7 @@ void TIM2_IRQHandler(void) {
    if (consecutive_detections > 19) { //low detected for 20 ms straight
       goals_detected = goals_detected + 1;
       consecutive_detections = 0;
-      //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1);
+      GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1);
    }
 
    if (goals_detected > 9) {
