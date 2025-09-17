@@ -1662,6 +1662,7 @@ uint16_t read_adc(void) {
 
 volatile uint8_t goals_detected = 0;
 volatile uint8_t consecutive_detections = 0;
+volatile uint8_t game_won = 0;
 
 void TIM2_IRQHandler(void) {
    //Acknowledge the interrupt by clearing the interrupt flag
@@ -1680,11 +1681,12 @@ void TIM2_IRQHandler(void) {
    if (consecutive_detections > 19) { //low detected for 20 ms straight
       goals_detected = goals_detected + 1;
       consecutive_detections = 0;
-      GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1);
+      //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1);
    }
 
    if (goals_detected > 9) {
       goals_detected = 0;
+      game_won = 1;
    }
 }
 
@@ -1706,6 +1708,7 @@ void init_tim2(void) {
 int main(void) {
 
    enable_ports();
+   uart_init();
    init_tim2();
 
    return EXIT_SUCCESS;
