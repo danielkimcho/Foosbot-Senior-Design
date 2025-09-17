@@ -1708,7 +1708,6 @@ void init_tim2(void) {
 int main(void) {
 
    enable_ports();
-   uart_init();
    init_tim2();
 
    return EXIT_SUCCESS;
