@@ -43,46 +43,6 @@ void update_display(int d1, int d2, int d3, int d4);
 
 uint16_t msg[8] = { 0x0000,0x0100,0x0200,0x0300,0x0400,0x0500,0x0600,0x0700 };
 
-const char font[] = {
-    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-    0x00, // 32: space
-    0x86, // 33: exclamation
-    0x22, // 34: double quote
-    0x76, // 35: octothorpe
-    0x00, // dollar
-    0x00, // percent
-    0x00, // ampersand
-    0x20, // 39: single quote
-    0x39, // 40: open paren
-    0x0f, // 41: close paren
-    0x49, // 42: asterisk
-    0x00, // plus
-    0x10, // 44: comma
-    0x40, // 45: minus
-    0x80, // 46: period
-    0x00, // slash
-    // digits
-    0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x67,
-    // seven unknown
-    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
-    // Uppercase
-    0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71, 0x6f, 0x76, 0x30, 0x1e, 0x00, 0x38, 0x00,
-    0x37, 0x3f, 0x73, 0x7b, 0x31, 0x6d, 0x78, 0x3e, 0x00, 0x00, 0x00, 0x6e, 0x00,
-    0x39, // 91: open square bracket
-    0x00, // backslash
-    0x0f, // 93: close square bracket
-    0x00, // circumflex
-    0x08, // 95: underscore
-    0x20, // 96: backquote
-    // Lowercase
-    0x5f, 0x7c, 0x58, 0x5e, 0x79, 0x71, 0x6f, 0x74, 0x10, 0x0e, 0x00, 0x30, 0x00,
-    0x54, 0x5c, 0x73, 0x7b, 0x50, 0x6d, 0x78, 0x1c, 0x00, 0x00, 0x00, 0x6e, 0x00
-};
-
-
 #if 0
    #define WIDTH 32
    #define HEIGHT 32
@@ -1620,6 +1580,47 @@ const char font[] = {
 
 //ACTUAL CODE STARTS HERE
 
+#define EXIT_SUCCESS 0
+#define THRESHOLD 3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
+
+const char font[] = {
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+    0x00, // 32: space
+    0x86, // 33: exclamation
+    0x22, // 34: double quote
+    0x76, // 35: octothorpe
+    0x00, // dollar
+    0x00, // percent
+    0x00, // ampersand
+    0x20, // 39: single quote
+    0x39, // 40: open paren
+    0x0f, // 41: close paren
+    0x49, // 42: asterisk
+    0x00, // plus
+    0x10, // 44: comma
+    0x40, // 45: minus
+    0x80, // 46: period
+    0x00, // slash
+    // digits
+    0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x67,
+    // seven unknown
+    0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+    // Uppercase
+    0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71, 0x6f, 0x76, 0x30, 0x1e, 0x00, 0x38, 0x00,
+    0x37, 0x3f, 0x73, 0x7b, 0x31, 0x6d, 0x78, 0x3e, 0x00, 0x00, 0x00, 0x6e, 0x00,
+    0x39, // 91: open square bracket
+    0x00, // backslash
+    0x0f, // 93: close square bracket
+    0x00, // circumflex
+    0x08, // 95: underscore
+    0x20, // 96: backquote
+    // Lowercase
+    0x5f, 0x7c, 0x58, 0x5e, 0x79, 0x71, 0x6f, 0x74, 0x10, 0x0e, 0x00, 0x30, 0x00,
+    0x54, 0x5c, 0x73, 0x7b, 0x50, 0x6d, 0x78, 0x1c, 0x00, 0x00, 0x00, 0x6e, 0x00
+};
 
 //===========================================================================
 // Configure All Ports
@@ -1627,21 +1628,85 @@ const char font[] = {
 void enable_ports(void) {
    RCC->AHBENR |= RCC_AHBENR_GPIOCEN; 
 
-   //enable PC1-PC3 for input and PC4-PC7 and PC0 for output
-   GPIOC->MODER &= ~0x0000ffff;
-   GPIOC->MODER |= 0x00005501;
+   //enable PC0 for analog input and PC1-PC8 for output
+   GPIOC->MODER &= ~0x0003ffff;
+   GPIOC->MODER |= 0x00015557;
 
-   //simulate pull down resistors for PC0-PC3
-   //also have mechanical pull down resistors in place just in case
-   GPIOC->PUPDR &= ~0x000000ff;
-   GPIOC->PUPDR |= 0x000000a8;
+   //configure in ADC register
+   //GPIOx_AFR H or L //analog mode
 
+   RCC->APB2ENR |= RCC_APB2ENR_ADCEN; //ADC interface clock enable
+
+   ADC1->CR |= ADC_CR_ADCAL; //start ADC callibration
+
+   while (ADC1->CR & ADC_CR_ADCAL) { //wait until callibration finishes (goes low)
+   }
+
+   ADC1->CR |= ADC_CR_ADEN; //enable ADC
+
+   //ADC1->ISR |= ADC_ISR_ADRDY; //declaring that system is ready for ADC conversion
+
+   while (!(ADC1->ISR & ADC_ISR_ADRDY)) { //wait until ardy has been set (goes high)
+   }
+
+   ADC1->CHSELR = ADC_CHSELR_CHSEL10; //select channel for pc0 ADC
+
+   ADC1->CR |= ADC_CR_ADSTART; //start first ADC conversion
 }
 
+uint16_t read_adc(void) {
+    while (!(ADC1->ISR & ADC_ISR_EOC)){ //wait for ADC conversion to finish
+    }
+    return ADC1->DR;
+}
 
+volatile uint8_t goals_detected = 0;
+volatile uint8_t consecutive_detections = 0;
+
+void TIM2_IRQHandler(void) {
+   //Acknowledge the interrupt by clearing the interrupt flag
+   TIM2->SR &= ~TIM_SR_UIF;
+
+   uint16_t pc0 = read_adc();
+   ADC1->CR |= ADC_CR_ADSTART; //start next ADC conversion immediately for maximum time
+
+   if (pc0 < THRESHOLD) { //low detected
+      consecutive_detections = consecutive_detections + 1;
+   }
+   else {
+      consecutive_detections = 0;
+   }
+
+   if (consecutive_detections > 19) { //low detected for 20 ms straight
+      goals_detected = goals_detected + 1;
+      consecutive_detections = 0;
+      GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1);
+   }
+
+   if (goals_detected > 9) {
+      goals_detected = 0;
+   }
+}
+
+void init_tim2(void) {
+
+   RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+
+   TIM2->PSC = 47;  
+   TIM2->ARR = 999; 
+
+   TIM2->DIER |= TIM_DIER_UIE;
+
+   TIM2->CR1 |= TIM_CR1_CEN;
+
+   NVIC_EnableIRQ(TIM2_IRQn);
+}
 
 
 int main(void) {
 
-   return 0;
+   enable_ports();
+   init_tim2();
+
+   return EXIT_SUCCESS;
 }
