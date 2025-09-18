@@ -1683,11 +1683,11 @@ void TIM2_IRQHandler(void) {
    if (pc0 < THRESHOLD) { //low detected
       consecutive_lows = consecutive_lows + 1;
       consecutive_highs = 0;
-      if (consecutive_lows > 19 && is_rearmed) { //low/ball detected for 20 ms straight
+      if (consecutive_lows > 4 && is_rearmed) { //low/ball detected for 20 ms straight
          goals_detected = goals_detected + 1;
          consecutive_lows = 0;
          consecutive_highs = 0;
-         lockout_ticks = 500; //wait lockout_ticks # ms before checking for goals again
+         lockout_ticks = 100; //wait lockout_ticks # ms before checking for goals again
          is_rearmed = false;
          GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1); //output to PC1-PC8 for display
       }
