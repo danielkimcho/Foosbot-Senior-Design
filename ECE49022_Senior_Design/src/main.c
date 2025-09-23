@@ -1672,37 +1672,40 @@ void TIM2_IRQHandler(void) {
    //Acknowledge the interrupt by clearing the interrupt flag
    TIM2->SR &= ~TIM_SR_UIF;
 
-   if (lockout_ticks > 0) {
-      lockout_ticks = lockout_ticks - 1;
-      return;
-   }
+   if (is_game_done = false) {
+      if (lockout_ticks > 0) {
+         lockout_ticks = lockout_ticks - 1;
+         return;
+      }
 
-   uint16_t pc0 = read_adc();
-   ADC1->CR |= ADC_CR_ADSTART; //start next ADC conversion immediately for maximum time
+      uint16_t pc0 = read_adc();
+      ADC1->CR |= ADC_CR_ADSTART; //start next ADC conversion immediately for maximum time
 
-   if (pc0 < THRESHOLD) { //low detected
-      consecutive_lows = consecutive_lows + 1;
-      consecutive_highs = 0;
-      if (consecutive_lows > 4 && is_rearmed) { //low/ball detected for 20 ms straight
-         goals_detected = goals_detected + 1;
-         consecutive_lows = 0;
+
+      if (pc0 < THRESHOLD) { //low detected
+         consecutive_lows = consecutive_lows + 1;
          consecutive_highs = 0;
-         lockout_ticks = 100; //wait lockout_ticks # ms before checking for goals again
-         is_rearmed = false;
-         GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1); //output to PC1-PC8 for display
+         if (consecutive_lows > 4 && is_rearmed) { //low/ball detected for 20 ms straight
+            goals_detected = goals_detected + 1;
+            consecutive_lows = 0;
+            consecutive_highs = 0;
+            lockout_ticks = 100; //wait lockout_ticks # ms before checking for goals again
+            is_rearmed = false;
+            GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1); //output to PC1-PC8 for display
+         }
       }
-   }
-   else { //high detected
-      consecutive_lows = 0;
-      consecutive_highs = consecutive_highs + 1;
-      if (consecutive_highs > 19) { //high/no ball detected for 20ms straight
-         is_rearmed = true;
+      else { //high detected
+         consecutive_lows = 0;
+         consecutive_highs = consecutive_highs + 1;
+         if (consecutive_highs > 19) { //high/no ball detected for 20ms straight
+            is_rearmed = true;
+         }
       }
-   }
 
-   if (goals_detected > 9) { //check if game is finished
-      goals_detected = 0;
-      is_game_done = true;
+      if (goals_detected > 9) { //check if game is finished
+         goals_detected = 0;
+         is_game_done = true;
+      }
    }
 }
 
