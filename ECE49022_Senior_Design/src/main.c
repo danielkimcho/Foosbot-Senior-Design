@@ -1672,7 +1672,7 @@ void TIM2_IRQHandler(void) {
    //Acknowledge the interrupt by clearing the interrupt flag
    TIM2->SR &= ~TIM_SR_UIF;
 
-   if (is_game_done = false) {
+   if (is_game_done == false) {
       if (lockout_ticks > 0) {
          lockout_ticks = lockout_ticks - 1;
          return;
