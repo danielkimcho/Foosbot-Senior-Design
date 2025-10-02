@@ -1583,6 +1583,8 @@ uint16_t msg[8] = { 0x0000,0x0100,0x0200,0x0300,0x0400,0x0500,0x0600,0x0700 };
 
 #define EXIT_SUCCESS 0
 #define THRESHOLD 3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
+#define PC0_CHANNEL ADC_CHSELR_CHSEL10
+#define PA0_CHANNEL ADC_CHSELR_CHSEL0
 
 const char font[] = {
     0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
@@ -1632,6 +1634,13 @@ void enable_ports(void) {
    //enable PC0 for analog input and PC1-PC8 for output
    GPIOC->MODER &= ~0x0003ffff;
    GPIOC->MODER |= 0x00015557;
+
+
+   RCC->AHBENR |= RCC_AHBENR_GPIOAEN; 
+
+   //enable PA0 for analog input and PA1-PA8 for output
+   GPIOA->MODER &= ~0x0003ffff;
+   GPIOA->MODER |= 0x00015557;
 }
 
 void init_adc(void) {
@@ -1646,16 +1655,23 @@ void init_adc(void) {
 
    while (!(ADC1->ISR & ADC_ISR_ADRDY)) { //wait until ardy has been set (goes high)
    }
-
-   ADC1->CHSELR = ADC_CHSELR_CHSEL10; //select channel for pc0 ADC
-
-   ADC1->CR |= ADC_CR_ADSTART; //start first ADC conversion
 }
 
-uint16_t read_adc(void) {
-    while (!(ADC1->ISR & ADC_ISR_EOC)){ //wait for ADC conversion to finish
-    }
-    return ADC1->DR;
+uint16_t read_adc(uint32_t channel) {
+   while (ADC1->CR & ADC_CR_ADSTART) {
+   }
+   //Select requested channel
+   ADC1->CHSELR = channel;
+
+   //Start conversion
+   ADC1->CR |= ADC_CR_ADSTART;
+
+   //Wait for conversion complete
+   while (!(ADC1->ISR & ADC_ISR_EOC)) {
+   }
+
+   //Read and return result
+   return ADC1->DR;
 }
 
 volatile uint8_t consecutive_lows = 0; //number of times/ms in a row that the ball was detected
@@ -1678,9 +1694,7 @@ void TIM2_IRQHandler(void) {
          return;
       }
 
-      uint16_t pc0 = read_adc();
-      ADC1->CR |= ADC_CR_ADSTART; //start next ADC conversion immediately for maximum time
-
+      uint16_t pc0 = read_adc(PC0_CHANNEL);
 
       if (pc0 < THRESHOLD) { //low detected
          consecutive_lows = consecutive_lows + 1;
@@ -1705,6 +1719,8 @@ void TIM2_IRQHandler(void) {
       if (goals_detected > 9) { //check if game is finished
          goals_detected = 0;
          is_game_done = true;
+         GPIOC->ODR &= 0xfe01;
+         NVIC_DisableIRQ(TIM2_IRQn);
       }
    }
 }
@@ -1723,12 +1739,105 @@ void init_tim2(void) {
    NVIC_EnableIRQ(TIM2_IRQn);
 }
 
+volatile uint8_t consecutive_lows_2 = 0; //number of times/ms in a row that the ball was detected
+volatile uint8_t consecutive_highs_2 = 0; //number of times/ms in a row that the ball was NOT detected
+
+volatile uint16_t lockout_ticks_2 = 0; //number of ms after score that interrupt waits before checking for score again
+volatile bool is_rearmed_2 = true; //has a high/no ball been detected for at least 20 times/ms in a row since last score
+
+volatile uint8_t goals_detected_2 = 0; //how many goals have been scored
+volatile bool is_game_done_2 = false; //is the game finished
+
+
+void TIM7_IRQHandler(void) {
+   //Acknowledge the interrupt by clearing the interrupt flag
+   TIM7->SR &= ~TIM_SR_UIF;
+
+   if (is_game_done_2 == false) {
+      if (lockout_ticks_2 > 0) {
+         lockout_ticks_2 = lockout_ticks_2 - 1;
+         return;
+      }
+
+      uint16_t pa0 = read_adc(PA0_CHANNEL);
+
+      if (pa0 < THRESHOLD) { //low detected
+         consecutive_lows_2 = consecutive_lows_2 + 1;
+         consecutive_highs_2 = 0;
+         if (consecutive_lows_2 > 4 && is_rearmed_2) { //low/ball detected for 20 ms straight
+            goals_detected_2 = goals_detected_2 + 1;
+            consecutive_lows_2 = 0;
+            consecutive_highs_2 = 0;
+            lockout_ticks_2 = 100; //wait lockout_ticks # ms before checking for goals again
+            is_rearmed_2 = false;
+            GPIOA->ODR = (GPIOA->ODR & 0xfe01) | ((uint16_t)(font[goals_detected_2 + '0']) << 1); //output to PC1-PC8 for display
+         }
+      }
+      else { //high detected
+         consecutive_lows_2 = 0;
+         consecutive_highs_2 = consecutive_highs_2 + 1;
+         if (consecutive_highs_2 > 19) { //high/no ball detected for 20ms straight
+            is_rearmed_2 = true;
+         }
+      }
+
+      if (goals_detected_2 > 9) { //check if game is finished
+         goals_detected_2 = 0;
+         is_game_done_2 = true;
+         GPIOA->ODR &= 0xfe01; //turn off display
+         NVIC_DisableIRQ(TIM7_IRQn);
+      }
+   }
+}
+
+void init_tim7(void) {
+
+   RCC->APB1ENR |= RCC_APB1ENR_TIM7EN;
+
+   TIM7->PSC = 47;  
+   TIM7->ARR = 999; 
+
+   TIM7->DIER |= TIM_DIER_UIE;
+
+   TIM7->CR1 |= TIM_CR1_CEN;
+
+   NVIC_EnableIRQ(TIM7_IRQn);
+}
+
+void TIM3_IRQHandler(void) {
+   //Acknowledge the interrupt by clearing the interrupt flag
+   TIM3->SR &= ~TIM_SR_UIF;
+
+   if (is_game_done || is_game_done_2) {
+      GPIOC->ODR &= 0xfe01;
+      GPIOA->ODR &= 0xfe01;
+      NVIC_DisableIRQ(TIM2_IRQn);
+      NVIC_DisableIRQ(TIM7_IRQn);
+      NVIC_DisableIRQ(TIM3_IRQn);
+   }
+}
+
+void init_tim3(void) {
+
+   RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+   TIM3->PSC = 47;  
+   TIM3->ARR = 999; 
+
+   TIM3->DIER |= TIM_DIER_UIE;
+
+   TIM3->CR1 |= TIM_CR1_CEN;
+
+   NVIC_EnableIRQ(TIM3_IRQn);
+}
 
 int main(void) {
 
    enable_ports();
    init_adc();
    init_tim2();
+   init_tim7();
+   init_tim3();
 
    return EXIT_SUCCESS;
 }
