@@ -1655,6 +1655,9 @@ void init_adc(void) {
 
    while (!(ADC1->ISR & ADC_ISR_ADRDY)) { //wait until ardy has been set (goes high)
    }
+
+   GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font['0']) << 1);
+   GPIOA->ODR = (GPIOA->ODR & 0xfe01) | ((uint16_t)(font['0']) << 1);
 }
 
 uint16_t read_adc(uint32_t channel) {
@@ -1672,6 +1675,33 @@ uint16_t read_adc(uint32_t channel) {
 
    //Read and return result
    return ADC1->DR;
+}
+
+void victory_lap(volatile uint32_t* odr) {
+   uint32_t segments[] = {
+      (1 << 1), 
+      (1 << 2), 
+      (1 << 3), 
+      (1 << 4), 
+      (1 << 5), 
+      (1 << 6)  
+   };
+
+   for (int lap = 0; lap < 5; lap++) {             
+      for (int i = 0; i < 6; i++) {               
+         *odr = segments[i];         
+         nano_wait(50000000);                 
+      }
+   }
+
+   *odr &= 0xfe01; 
+}
+
+void disable_interrupts() {
+   GPIOC->ODR &= 0xfe01;
+   GPIOA->ODR &= 0xfe01;
+   NVIC_DisableIRQ(TIM2_IRQn);
+   NVIC_DisableIRQ(TIM7_IRQn);
 }
 
 volatile uint8_t consecutive_lows = 0; //number of times/ms in a row that the ball was detected
@@ -1717,10 +1747,10 @@ void TIM2_IRQHandler(void) {
       }
 
       if (goals_detected > 9) { //check if game is finished
+         disable_interrupts();
+         victory_lap(&(GPIOC->ODR));
          goals_detected = 0;
          is_game_done = true;
-         GPIOC->ODR &= 0xfe01;
-         NVIC_DisableIRQ(TIM2_IRQn);
       }
    }
 }
@@ -1782,10 +1812,10 @@ void TIM7_IRQHandler(void) {
       }
 
       if (goals_detected_2 > 9) { //check if game is finished
+         disable_interrupts();
+         victory_lap(&(GPIOA->ODR));
          goals_detected_2 = 0;
          is_game_done_2 = true;
-         GPIOA->ODR &= 0xfe01; //turn off display
-         NVIC_DisableIRQ(TIM7_IRQn);
       }
    }
 }
@@ -1804,40 +1834,12 @@ void init_tim7(void) {
    NVIC_EnableIRQ(TIM7_IRQn);
 }
 
-void TIM3_IRQHandler(void) {
-   //Acknowledge the interrupt by clearing the interrupt flag
-   TIM3->SR &= ~TIM_SR_UIF;
-
-   if (is_game_done || is_game_done_2) {
-      GPIOC->ODR &= 0xfe01;
-      GPIOA->ODR &= 0xfe01;
-      NVIC_DisableIRQ(TIM2_IRQn);
-      NVIC_DisableIRQ(TIM7_IRQn);
-      NVIC_DisableIRQ(TIM3_IRQn);
-   }
-}
-
-void init_tim3(void) {
-
-   RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
-
-   TIM3->PSC = 47;  
-   TIM3->ARR = 999; 
-
-   TIM3->DIER |= TIM_DIER_UIE;
-
-   TIM3->CR1 |= TIM_CR1_CEN;
-
-   NVIC_EnableIRQ(TIM3_IRQn);
-}
-
 int main(void) {
 
    enable_ports();
    init_adc();
    init_tim2();
    init_tim7();
-   init_tim3();
 
    return EXIT_SUCCESS;
 }
