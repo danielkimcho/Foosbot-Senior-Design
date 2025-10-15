@@ -1690,7 +1690,7 @@ void victory_lap(volatile uint32_t* odr) {
    for (int lap = 0; lap < 5; lap++) {             
       for (int i = 0; i < 6; i++) {               
          *odr = segments[i];         
-         nano_wait(50000000);                 
+         nano_wait(25000000);                 
       }
    }
 
@@ -1834,12 +1834,124 @@ void init_tim7(void) {
    NVIC_EnableIRQ(TIM7_IRQn);
 }
 
+
+
+
+
+
+
+
+
+
+
+void enable_motor_ports(void) {
+   RCC->AHBENR |= RCC_AHBENR_GPIOCEN; 
+
+   //enable PC0 for analog input and PC1-PC8 for output
+   GPIOC->MODER &= ~0x03fc0000;
+   GPIOC->MODER |= 0x000140000;
+}
+
+volatile uint16_t pulse_target = 0;
+volatile uint16_t num_pulses = 0;
+volatile bool is_waiting_for_next_pulse = true;
+
+void TIM3_IRQHandler(void) {
+
+   if ((GPIOC->IDR & 0x0800) && is_waiting_for_next_pulse) {
+      num_pulses += 1;
+      is_waiting_for_next_pulse = false;
+   }
+   else if (!(GPIOC->IDR & 0x0800)) {
+      is_waiting_for_next_pulse = true;
+   }
+
+   if (!(GPIOC->ODR & 0x0200) && num_pulses < pulse_target) {
+      GPIOC->ODR = 0x0200;
+   }
+   else if (!(GPIOC->ODR & 0x0400) && num_pulses >= pulse_target) {
+      GPIOC->ODR = 0x0600;
+      nano_wait(5000000);
+      GPIOC->ODR = 0x0400;
+      
+      
+
+      //GPIOC->ODR = 0x0600;
+   }
+}
+
+void init_tim3(void) {
+   RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+
+   TIM3->PSC = 47;  
+   TIM3->ARR = 499; 
+
+   TIM3->DIER |= TIM_DIER_UIE;
+
+   TIM3->CR1 |= TIM_CR1_CEN;
+
+   NVIC_EnableIRQ(TIM3_IRQn);
+}
+
+
+
+
+/*void enable_encoder_interrupt(void) {
+   RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;     // Enable SYSCFG clock
+   SYSCFG->EXTICR[2] = SYSCFG_EXTICR3_EXTI11_PC; // Map EXTI11 to PC11
+
+   EXTI->IMR  |= EXTI_IMR_MR11;   // Unmask EXTI line 11
+   EXTI->RTSR |= EXTI_RTSR_TR11;  // Trigger on rising edge
+   EXTI->PR = EXTI_PR_PR11; 
+
+   NVIC_EnableIRQ(EXTI4_15_IRQn);
+}
+
+void EXTI4_15_IRQHandler(void) {
+   if (EXTI->PR & EXTI_PR_PR11) {  // Check pending flag for PC11
+      EXTI->PR = EXTI_PR_PR11;     // Clear it
+
+      num_pulses++;
+
+      if (num_pulses < PULSES_PER_REVOLUTION) {
+         GPIOC->ODR = 0x0200;  // PC9 high (enable), PC10 low (brake off)
+      }
+      else {
+         GPIOC->ODR = 0x0000;
+         //GPIOC->ODR = 0x0400;  // PC10 high (brake on), PC9 low
+      }
+   }
+}*/
+
+void spin(int degrees) {
+   if (0.9348 * degrees - 10.6 < 0) {
+      pulse_target = 0; 
+   }
+   else {
+      pulse_target = 0.9348 * degrees - 10.6;
+   }
+}
+
+
+
 int main(void) {
 
    enable_ports();
    init_adc();
    init_tim2();
    init_tim7();
+
+
+   //enable_motor_ports();
+   //init_tim3();
+   //int degrees = 0
+   //spin(degrees);
+
+
+
+
+   //enable_encoder_interrupt();
+   //GPIOC->ODR = 0x0200;
 
    return EXIT_SUCCESS;
 }
