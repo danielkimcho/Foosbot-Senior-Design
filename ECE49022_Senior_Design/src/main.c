@@ -303,7 +303,7 @@ void enable_motor_ports(void) {
    RCC->AHBENR |= RCC_AHBENR_GPIOCEN; 
 
    GPIOC->MODER &= ~0x03fc0000;
-   GPIOC->MODER |= 0x000140000;
+   GPIOC->MODER |= 0x001140000;
 }
 
 volatile uint16_t pulse_target = 0;
