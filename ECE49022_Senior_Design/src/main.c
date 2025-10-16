@@ -303,7 +303,7 @@ void enable_motor_ports(void) {
    RCC->AHBENR |= RCC_AHBENR_GPIOCEN; 
 
    GPIOC->MODER &= ~0x03fc0000;
-   GPIOC->MODER |= 0x001140000;
+   GPIOC->MODER |= 0x000140000;
 }
 
 volatile uint16_t pulse_target = 0;
@@ -375,16 +375,21 @@ void spin(int degrees) {
 
 int main(void) {
 
+   /*
    enable_ports();
    init_adc();
    init_tim2();
    init_tim7();
+   */
 
-   //int degrees = -360;
 
-   //enable_motor_ports();
-   //spin(degrees);
-   //init_tim3();
+   
+   int degrees = 2000;
+
+   enable_motor_ports();
+   spin(degrees);
+   init_tim3();
+   
 
    return EXIT_SUCCESS;
 }
