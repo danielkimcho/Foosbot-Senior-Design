@@ -395,6 +395,14 @@ void init_tim14(void) {
    NVIC_EnableIRQ(TIM14_IRQn);
 }
 
+void TIM14_IRQHandler(void) {
+   
+}
+
+void extend(int mm) {   
+
+}
+
 
 
 int main(void) {
