@@ -299,7 +299,7 @@ void init_tim7(void) {
 
 
 
-void enable_motor_ports(void) {
+void enable_rotational_motor_ports(void) {
    RCC->AHBENR |= RCC_AHBENR_GPIOCEN; 
 
    GPIOC->MODER &= ~0x03fc0000;
@@ -373,6 +373,30 @@ void spin(int degrees) {
 
 
 
+
+void enable_linear_motor_ports() {
+   RCC->AHBENR |= RCC_AHBENR_GPIOCEN; 
+
+   //CHANGE
+   GPIOC->MODER &= ~0x03fc0000;
+   GPIOC->MODER |= 0x000140000;
+}
+
+void init_tim14(void) {
+   RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+
+   TIM14->PSC = 47;  
+   TIM14->ARR = 999; 
+
+   TIM14->DIER |= TIM_DIER_UIE;
+
+   TIM14->CR1 |= TIM_CR1_CEN;
+
+   NVIC_EnableIRQ(TIM14_IRQn);
+}
+
+
+
 int main(void) {
 
    /*
@@ -383,12 +407,21 @@ int main(void) {
    */
 
 
-   
+   /*
    int degrees = 2000;
 
-   enable_motor_ports();
+   enable_rotational_motor_ports();
    spin(degrees);
    init_tim3();
+   */
+
+   int mm = 1000;
+
+   enable_linear_motor_ports();
+   extend(mm);
+   init_tim14();
+
+
    
 
    return EXIT_SUCCESS;
