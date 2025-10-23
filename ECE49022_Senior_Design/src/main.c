@@ -373,20 +373,25 @@ void spin(int degrees) {
 
 
 
+volatile uint16_t pulse_count = 0;
+volatile uint16_t total_pulses;
 
 void enable_linear_motor_ports() {
    RCC->AHBENR |= RCC_AHBENR_GPIOCEN; 
 
    //CHANGE
-   GPIOC->MODER &= ~0x03fc0000;
-   GPIOC->MODER |= 0x000140000;
+   GPIOC->MODER &= ~0x0f000000;
+   GPIOC->MODER |= 0x05000000;
 }
 
 void init_tim14(void) {
    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 
    TIM14->PSC = 47;  
-   TIM14->ARR = 999; 
+   //TIM14->ARR = 999; 
+   //TIM14->ARR = 99; 
+   TIM14->ARR = 54; //59; 
+
 
    TIM14->DIER |= TIM_DIER_UIE;
 
@@ -396,12 +401,37 @@ void init_tim14(void) {
 }
 
 void TIM14_IRQHandler(void) {
-   
+   if (TIM14->SR & TIM_SR_UIF) {       
+      TIM14->SR &= ~TIM_SR_UIF;       
+
+      if (pulse_count < total_pulses * 2) {
+         GPIOC->ODR ^= (1 << 13); //toggle PC13 STEP
+         //GPIOC->ODR |= (1 << 12); //direction DIR
+         pulse_count++;
+      } 
+      else {
+         TIM14->CR1 &= ~TIM_CR1_CEN;
+         //NVIC_DisableIRQ(TIM14_IRQn);
+      }
+   }
 }
 
-void extend(int mm) {   
-
+void set_direction_and_pulses(int direction, int mm) {
+   total_pulses = (int) (1000.0 / (3.0 / 8) / 2.54 / 10 * mm);
+   //total_pulses = pulses;
+   if (direction > 0) {
+      GPIOC->BSRR = (1 << (12 + 16));
+      //GPIOC->ODR &= ~(1 << 12); //extend direction
+   }
+   else {
+      GPIOC->BSRR = (1 << 12);
+      //GPIOC->ODR |= (1 << 12); //contract direction
+   }
 }
+
+//void extend(int mm) {   
+
+//}
 
 
 
@@ -423,10 +453,12 @@ int main(void) {
    init_tim3();
    */
 
-   int mm = 1000;
-
+   int direction = -1;
+   //int pulses = 2650;
+   int mm = 15; //25.4;
    enable_linear_motor_ports();
-   extend(mm);
+   //extend(mm);
+   set_direction_and_pulses(direction, mm);
    init_tim14();
 
 
