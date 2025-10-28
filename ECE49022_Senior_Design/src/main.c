@@ -673,7 +673,7 @@ int main(void) {
    //nano_wait(50000);
    tic_energize();
    //nano_wait(50000);
-   tic_set_target_position(3000);
+   tic_set_target_position(-3000);
    //nano_wait(100000000);
    //tic_set_target_position(3000);
 
