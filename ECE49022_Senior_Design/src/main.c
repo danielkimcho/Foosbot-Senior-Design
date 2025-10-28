@@ -11,6 +11,7 @@
 //added "STM32F091" to defines in c_cpp_properties.json
 
 #include "stm32f0xx.h"
+#include <assert.h>
 //#include "stm32f091xc.h" //added instead of above include
 #include <string.h>
 #include <stdio.h>
@@ -372,9 +373,9 @@ void spin(int degrees) {
 
 
 
-
-volatile uint16_t pulse_count = 0;
-volatile uint16_t total_pulses;
+/*
+volatile uint32_t pulse_count = 0;
+volatile uint32_t total_pulses;
 
 void enable_linear_motor_ports() {
    RCC->AHBENR |= RCC_AHBENR_GPIOCEN; 
@@ -387,10 +388,8 @@ void enable_linear_motor_ports() {
 void init_tim14(void) {
    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 
-   TIM14->PSC = 47;  
-   //TIM14->ARR = 999; 
-   //TIM14->ARR = 99; 
-   TIM14->ARR = 54; //59; 
+   TIM14->PSC = 47; 
+   TIM14->ARR = 99;
 
 
    TIM14->DIER |= TIM_DIER_UIE;
@@ -416,9 +415,40 @@ void TIM14_IRQHandler(void) {
    }
 }
 
-void set_direction_and_pulses(int direction, int mm) {
+void set_direction_and_distance(int direction, int mm) {
    total_pulses = (int) (1000.0 / (3.0 / 8) / 2.54 / 10 * mm);
-   //total_pulses = pulses;
+   
+   if (direction > 0) {
+      GPIOC->BSRR = (1 << (12 + 16));
+      //GPIOC->ODR &= ~(1 << 12); //extend direction
+   }
+   else {
+      GPIOC->BSRR = (1 << 12);
+      //GPIOC->ODR |= (1 << 12); //contract direction
+   }
+}*/
+
+
+
+
+
+
+
+
+
+
+/*
+#define STEP_FREQ_HZ     9000   // 50 kHz = driver max
+#define TIMER_CLK_HZ     48000000
+#define RCR_MAX          255
+
+volatile uint32_t total_pulses = 0;
+volatile uint32_t remaining_toggles = 0;
+
+void set_direction_and_distance(int direction, int mm) {
+   total_pulses = (int) (1000.0 / (3.0 / 8) / 2.54 / 10 * mm);
+   remaining_toggles = 2 * total_pulses;
+
    if (direction > 0) {
       GPIOC->BSRR = (1 << (12 + 16));
       //GPIOC->ODR &= ~(1 << 12); //extend direction
@@ -429,9 +459,171 @@ void set_direction_and_pulses(int direction, int mm) {
    }
 }
 
-//void extend(int mm) {   
 
-//}
+void enable_linear_motor_ports(void) {
+    // --- Enable clocks ---
+    RCC->AHBENR |= RCC_AHBENR_GPIOAEN;   // GPIOA clock (PA8 = STEP)
+    RCC->AHBENR |= RCC_AHBENR_GPIOCEN;   // GPIOC clock (PC12 = DIR)
+    RCC->APB2ENR |= RCC_APB2ENR_TIM1EN;  // TIM1 clock
+
+    // --- Configure PA8 as TIM1_CH1 alternate function ---
+    GPIOA->MODER &= ~(0x3 << (8 * 2));      // Clear mode bits
+    GPIOA->MODER |=  (0x2 << (8 * 2));      // AF mode
+    GPIOA->AFR[1] &= ~(0xF << ((8-8)*4));   // Clear AFR bits for PA8
+    GPIOA->AFR[1] |=  (0x2 << ((8-8)*4));   // AF2 = TIM1_CH1
+
+    // --- Configure PC12 as general purpose output for DIR ---
+    GPIOC->MODER &= ~(0x3 << (12 * 2));     // Clear mode bits
+    GPIOC->MODER |=  (0x1 << (12 * 2));     // Output mode
+    GPIOC->OTYPER &= ~(1 << 12);            // Push-pull
+    GPIOC->OSPEEDR |=  (0x3 << (12 * 2));   // High speed
+    GPIOC->PUPDR &= ~(0x3 << (12 * 2));     // No pull-up/down
+}
+
+
+void start_tim1_stepper(void) {
+    // Compute ARR for toggle mode (half period)
+    uint32_t target = TIMER_CLK_HZ / (2 * STEP_FREQ_HZ);
+    uint16_t PSC = 0;
+    uint16_t ARR = target - 1;
+    if (ARR > 0xFFFF) {
+        PSC = (ARR / 0xFFFF) + 1;
+        ARR = (target / (PSC + 1)) - 1;
+    }
+
+    TIM1->PSC = PSC;
+    TIM1->ARR = ARR;
+    TIM1->CCR1 = ARR;
+
+    // Toggle mode on TIM1_CH1
+    TIM1->CCMR1 &= ~TIM_CCMR1_CC1S;       // output
+    TIM1->CCMR1 &= ~(0x7 << 4);
+    TIM1->CCMR1 |= (0x3 << 4);            // toggle mode
+
+    TIM1->CCER |= TIM_CCER_CC1E;          // enable output
+    TIM1->BDTR |= TIM_BDTR_MOE;           // main output enable
+    TIM1->EGR |= TIM_EGR_UG;              // update event
+    TIM1->CR1 |= TIM_CR1_ARPE;            // ARR preload
+
+    // Setup interrupt for repetition completion
+    NVIC_EnableIRQ(TIM1_BRK_UP_TRG_COM_IRQn);
+    TIM1->DIER |= TIM_DIER_UIE;
+
+    // Load initial batch into RCR
+    uint16_t batch = (remaining_toggles - 1 > RCR_MAX) ? RCR_MAX : (remaining_toggles - 1);
+    TIM1->RCR = batch;
+    remaining_toggles -= (batch + 1);
+
+    TIM1->CR1 |= TIM_CR1_CEN;             // start timer
+}
+
+// ----------------------------- ISR -----------------------------
+void TIM1_BRK_UP_TRG_COM_IRQHandler(void) {
+    TIM1->SR &= ~TIM_SR_UIF; // clear update flag
+
+    if (remaining_toggles == 0) {
+        TIM1->CR1 &= ~TIM_CR1_CEN;  // stop timer
+        return;
+    }
+
+    uint16_t batch = (remaining_toggles - 1 > RCR_MAX) ? RCR_MAX : (remaining_toggles - 1);
+    TIM1->RCR = batch;
+    remaining_toggles -= (batch + 1);
+}*/
+    
+
+
+
+#define SYS_CLK_HZ   48000000UL
+#define BAUDRATE     19200UL
+
+void init_usart1(void) {
+    // --- Enable clocks ---
+    RCC->AHBENR  |= RCC_AHBENR_GPIOAEN;    // GPIOA clock
+
+    //RCC->CFGR3 &= ~(RCC_CFGR3_USART1SW);
+    //RCC->CFGR3 |=  (0x1 << RCC_CFGR3_USART1SW_Pos); // SYSCLK (48 MHz)
+
+
+    // --- Configure PA9 (TX) and PA10 (RX) as AF1 ---
+    GPIOA->MODER &= ~((3 << (9 * 2)) | (3 << (10 * 2))); // clear mode
+    GPIOA->MODER |=  ((2 << (9 * 2)) | (2 << (10 * 2))); // AF mode
+    GPIOA->AFR[1] &= ~((0xF << ((9 - 8) * 4)) | (0xF << ((10 - 8) * 4)));
+    GPIOA->AFR[1] |=  ((0x1 << ((9 - 8) * 4)) | (0x1 << ((10 - 8) * 4))); // AF1
+
+    RCC->APB2ENR |= RCC_APB2ENR_USART1EN;  // USART1 clock
+
+    // --- Configure USART1 ---
+    //USART1->CR1 = 0;  // Disable before configuration
+    USART1->CR1 &= ~USART_CR1_UE;
+
+    USART1->CR1 &= ~((1 << 28) | (1 << 12)); 
+
+    //Set it for one stop bit.
+    USART1->CR2 &= ~(3 << 12);
+
+    //Set it for no parity control.
+    USART1->CR1 &= ~(1 << 10); 
+
+   
+    //Use 16x oversampling.
+    USART1->CR1 &= ~(1 << 15); 
+
+
+    // Baud rate: BRR = Fck / Baud
+    USART1->BRR = SYS_CLK_HZ / BAUDRATE / 36;  // 48000000 / 19200 = 2500 (0x9C4)
+
+    USART1->CR1 |= USART_CR1_TE | USART_CR1_RE; // Enable TX and RX
+    USART1->CR1 |= USART_CR1_UE;                // Enable USART
+
+   while ((USART1->ISR & (USART_ISR_TEACK | USART_ISR_REACK)) !=
+      (USART_ISR_TEACK | USART_ISR_REACK));
+}
+
+void usart1_send_byte(uint8_t data) {
+    while (!(USART1->ISR & USART_ISR_TXE)); // Wait until TX empty
+    USART1->TDR = data;
+}
+
+void usart1_send_array(const uint8_t *data, uint16_t len) {
+    for (uint16_t i = 0; i < len; i++) {
+        usart1_send_byte(data[i]);
+    }
+}
+
+void tic_exit_safe_start(void) {
+    uint8_t cmd = 0x83; // Exit Safe Start
+    usart1_send_byte(cmd);
+}
+
+void tic_energize(void) {
+    uint8_t cmd = 0x85; // Energize
+    usart1_send_byte(cmd);
+}
+
+void tic_set_target_position(int32_t target) {
+    //uint8_t cmd[6];
+    uint8_t command = 0xE0; // Set target position
+    
+    uint8_t data1 = target & 0xFF;
+    uint8_t data2 = (target >> 8) & 0xFF;
+    uint8_t data3 = (target >> 16) & 0xFF;
+    uint8_t data4 = (target >> 24) & 0xFF;
+    
+    // Build MSBs byte: bits 0–3 contain the MSb of each data byte
+    uint8_t msbs = ((target >> 7) & 0x01) | ((target >> 14) & 0x02) | ((target >> 21) & 0x04) | ((target >> 28) & 0x08);   
+
+    data1 &= 0x7F;
+    data2 &= 0x7F;
+    data3 &= 0x7F;
+    data4 &= 0x7F;
+
+    uint8_t data_array[6] = {command, msbs, data1, data2, data3, data4};
+
+    usart1_send_array(data_array, 6);
+}
+
+
 
 
 
@@ -453,16 +645,39 @@ int main(void) {
    init_tim3();
    */
 
-   int direction = -1;
-   //int pulses = 2650;
-   int mm = 15; //25.4;
-   enable_linear_motor_ports();
-   //extend(mm);
-   set_direction_and_pulses(direction, mm);
-   init_tim14();
+   
 
+
+   //int direction = -1;
+   //int mm = 25.4; //25.4;
+   //enable_linear_motor_ports();
+
+   //////set_direction_and_distance(direction, mm);
+   
+   //start_tim1_stepper();
+
+
+   //while (TIM1->CR1 & TIM_CR1_CEN) {
+      // wait for motion to finish
+   //}
 
    
+   //init_tim14();
+
+
+
+   init_usart1();
+   //nano_wait(1000000);
+
+   tic_exit_safe_start();
+   //nano_wait(50000);
+   tic_energize();
+   //nano_wait(50000);
+   tic_set_target_position(3000);
+   //nano_wait(100000000);
+   //tic_set_target_position(3000);
+
+   //target_position in range of 0 to 10,000
 
    return EXIT_SUCCESS;
 }
