@@ -673,11 +673,13 @@ int main(void) {
    //nano_wait(50000);
    tic_energize();
    //nano_wait(50000);
-   tic_set_target_position(-3000);
-   //nano_wait(100000000);
-   //tic_set_target_position(3000);
+   tic_set_target_position(-5000);
+   nano_wait(1000000000);
 
-   //target_position in range of 0 to 10,000
+   tic_exit_safe_start();
+   tic_set_target_position(5000);
+
+   //target_position in range of -5000 to 5000
 
    return EXIT_SUCCESS;
 }
