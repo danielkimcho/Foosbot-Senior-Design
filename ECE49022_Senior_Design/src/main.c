@@ -773,7 +773,7 @@ void tic_energize(USART_TypeDef *USARTx) {
     usart_send_byte(USARTx, cmd);
 }
 
-void tic_set_target_position(int motor_id, int16_t target) {
+void tic_set_target_position(USART_TypeDef *USARTx, int16_t target) {
     //uint8_t cmd[6];
     uint8_t command = 0xE0; // Set target position
     
@@ -792,7 +792,7 @@ void tic_set_target_position(int motor_id, int16_t target) {
 
     uint8_t data_array[6] = {command, msbs, data1, data2, data3, data4};
 
-    usart_send_array(motor_id, data_array, 6);
+    usart_send_array(USARTx, data_array, 6);
 }
 
 
@@ -819,6 +819,22 @@ bool is_motor_busy(USART_TypeDef *USARTx) {
 volatile uint8_t rx_buffer[RX_BUFFER_SIZE];
 volatile uint8_t rx_write_idx = 0;
 volatile uint8_t rx_read_idx = 0;
+
+void USART3_8_IRQHandler(void) { 
+   if (USART5->ISR & USART_ISR_RXNE) {
+      uint8_t byte = USART5->RDR & 0xFF;
+      uint8_t next_rx_write_idx = (rx_write_idx + 1) % RX_BUFFER_SIZE;
+      if (next_rx_write_idx != rx_read_idx) { //valid write  
+         rx_buffer[rx_write_idx] = byte;
+         rx_write_idx = next_rx_write_idx;
+      }
+   }
+}
+
+void usart5_read_byte_nonblocking(uint8_t *byte) {
+    *byte = rx_buffer[rx_read_idx];
+    rx_read_idx = (rx_read_idx + 1) % RX_BUFFER_SIZE;
+}
 
 void handle_data_from_pi(void) {
    /*uint8_t motor_id = usart5_read_byte();
@@ -867,23 +883,6 @@ void handle_data_from_pi(void) {
    }
 }
 
-void USART3_8_IRQHandler(void) { 
-   if (USART5->ISR & USART_ISR_RXNE) {
-      uint8_t byte = USART5->RDR & 0xFF;
-      uint8_t next_rx_write_idx = (rx_write_idx + 1) % RX_BUFFER_SIZE;
-      if (next_rx_write_idx != rx_read_idx) { //valid write  
-         rx_buffer[rx_write_idx] = byte;
-         rx_write_idx = next_rx_write_idx;
-      }
-   }
-}
-
-void usart5_read_byte_nonblocking(uint8_t *byte) {
-    *byte = rx_buffer[rx_read_idx];
-    rx_read_idx = (rx_read_idx + 1) % RX_BUFFER_SIZE;
-}
-
-
 void TIM6_IRQHandler(void) {
    TIM7->SR &= ~TIM_SR_UIF;
    handle_data_from_pi();
@@ -901,6 +900,7 @@ void init_tim6(void) {
 
    NVIC_EnableIRQ(TIM6_IRQn);
 }
+
 
 
 int main(void) {
@@ -963,6 +963,7 @@ int main(void) {
 
 
 
+
    //START EVERYTHING
 
    //Scoring System
@@ -981,14 +982,15 @@ int main(void) {
    */
 
    //Linear Motors
-   /*
+   
    init_usart1();
    init_usart2();
    tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
    tic_exit_safe_start(USART2); //TODO: May need to put this somewhere else
    tic_energize(USART1);        //TODO: May need to put this somewhere else
    tic_energize(USART2);        //TODO: May need to put this somewhere else
-   */
+   //tic_set_target_position(USART1, 5000);
+   
 
    //Pi Communication
    /*
