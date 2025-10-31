@@ -482,6 +482,7 @@ volatile bool clockwise1 = false;
 volatile bool is_rotating1 = false;
 
 void TIM3_IRQHandler(void) {
+   TIM3->SR &= ~TIM_SR_UIF;
 
    if ((GPIOC->IDR & 0x0800) && is_waiting_for_next_pulse1) { //pulse is high, count new pulse
       num_pulses1 += 1;
@@ -553,6 +554,7 @@ volatile bool clockwise2 = false;
 volatile bool is_rotating2 = false;
 
 void TIM14_IRQHandler(void) {
+   TIM14->SR &= ~TIM_SR_UIF;
 
    if ((GPIOB->IDR & 0x0004) && is_waiting_for_next_pulse1) { //pulse is high, count new pulse
       num_pulses1 += 1;
@@ -730,6 +732,8 @@ void init_usart5(void) {
     // Wait for receiver to be ready
     while (!(USART5->ISR & USART_ISR_REACK)) {
     }
+
+    NVIC_EnableIRQ(USART3_8_IRQn);
 }
 
 /*
@@ -759,14 +763,14 @@ void usart_send_array(USART_TypeDef *USARTx, const uint8_t *data, uint16_t len) 
    }
 }
 
-void tic_exit_safe_start(void) {
+void tic_exit_safe_start(USART_TypeDef *USARTx) {
     uint8_t cmd = 0x83; // Exit Safe Start
-    usart1_send_byte(cmd);
+    usart_send_byte(USARTx, cmd);
 }
 
-void tic_energize(void) {
+void tic_energize(USART_TypeDef *USARTx) {
     uint8_t cmd = 0x85; // Energize
-    usart1_send_byte(cmd);
+    usart_send_byte(USARTx, cmd);
 }
 
 void tic_set_target_position(int motor_id, int16_t target) {
@@ -813,8 +817,8 @@ bool is_motor_busy(USART_TypeDef *USARTx) {
 
 #define RX_BUFFER_SIZE 64
 volatile uint8_t rx_buffer[RX_BUFFER_SIZE];
-volatile uint8_t rx_head = 0;
-volatile uint8_t rx_tail = 0;
+volatile uint8_t rx_write_idx = 0;
+volatile uint8_t rx_read_idx = 0;
 
 void handle_data_from_pi(void) {
    /*uint8_t motor_id = usart5_read_byte();
@@ -826,7 +830,7 @@ void handle_data_from_pi(void) {
    uint8_t motor_id, data1, data2;
 
    // Check if at least 3 bytes are available in the buffer
-   if ((rx_head + RX_BUFFER_SIZE - rx_tail) % RX_BUFFER_SIZE < 3) {
+   if ((rx_write_idx - rx_read_idx + RX_BUFFER_SIZE) % RX_BUFFER_SIZE < 3) {
       return; // Not enough data yet, just exit
    }
 
@@ -863,26 +867,45 @@ void handle_data_from_pi(void) {
    }
 }
 
-void USART3_4_5_6_IRQHandler(void) {  // Depends on STM32 model
-    if (USART5->ISR & USART_ISR_RXNE) {
-        uint8_t byte = USART5->RDR & 0xFF;
-        uint8_t next = (rx_head + 1) % RX_BUFFER_SIZE;
-        if (next != rx_tail) {  // Check buffer not full
-            rx_buffer[rx_head] = byte;
-            rx_head = next;
-        }
-    }
+void USART3_8_IRQHandler(void) { 
+   if (USART5->ISR & USART_ISR_RXNE) {
+      uint8_t byte = USART5->RDR & 0xFF;
+      uint8_t next_rx_write_idx = (rx_write_idx + 1) % RX_BUFFER_SIZE;
+      if (next_rx_write_idx != rx_read_idx) { //valid write  
+         rx_buffer[rx_write_idx] = byte;
+         rx_write_idx = next_rx_write_idx;
+      }
+   }
 }
 
-bool usart5_read_byte_nonblocking(uint8_t *byte) {
-    if (rx_head == rx_tail) return false; // buffer empty
-    *byte = rx_buffer[rx_tail];
-    rx_tail = (rx_tail + 1) % RX_BUFFER_SIZE;
-    return true;
+void usart5_read_byte_nonblocking(uint8_t *byte) {
+    *byte = rx_buffer[rx_read_idx];
+    rx_read_idx = (rx_read_idx + 1) % RX_BUFFER_SIZE;
+}
+
+
+void TIM6_IRQHandler(void) {
+   TIM7->SR &= ~TIM_SR_UIF;
+   handle_data_from_pi();
+}
+
+void init_tim6(void) {
+   RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
+
+   TIM6->PSC = 47;  
+   TIM6->ARR = 999; 
+
+   TIM6->DIER |= TIM_DIER_UIE;
+
+   TIM6->CR1 |= TIM_CR1_CEN;
+
+   NVIC_EnableIRQ(TIM6_IRQn);
 }
 
 
 int main(void) {
+
+   //TEST SCORING SYSTEM
 
    /*
    enable_ports();
@@ -891,6 +914,9 @@ int main(void) {
    init_tim7();
    */
 
+
+
+   //TEST ROTATIONAL MOTOR
 
    /*
    int degrees = 2000;
@@ -902,7 +928,7 @@ int main(void) {
 
    
 
-   //UNUSED:
+   //UNUSED LINEAR MOTOR TEST:
 
    //int direction = -1;
    //int mm = 25.4; //25.4;
@@ -916,6 +942,9 @@ int main(void) {
 
 
 
+   //TEST LINEAR MOTOR
+
+   /*
    init_usart1();
    //nano_wait(1000000);
 
@@ -930,6 +959,42 @@ int main(void) {
    tic_set_target_position(0, 5000);
 
    //target_position in range of -5000 to 5000
+   */
+
+
+
+   //START EVERYTHING
+
+   //Scoring System
+   /*
+   enable_ports();
+   init_adc();
+   init_tim2();
+   init_tim7();
+   */
+
+   //Rotation Motors
+   /*
+   enable_rotational_motor_ports();
+   init_tim3();
+   init_tim14();
+   */
+
+   //Linear Motors
+   /*
+   init_usart1();
+   init_usart2();
+   tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
+   tic_exit_safe_start(USART2); //TODO: May need to put this somewhere else
+   tic_energize(USART1);        //TODO: May need to put this somewhere else
+   tic_energize(USART2);        //TODO: May need to put this somewhere else
+   */
+
+   //Pi Communication
+   /*
+   init_usart5(); //also enables USART3_8
+   init_tim6();
+   */
 
    return EXIT_SUCCESS;
 }
