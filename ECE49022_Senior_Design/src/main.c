@@ -984,11 +984,11 @@ int main(void) {
    //Linear Motors
    
    init_usart1();
-   init_usart2();
+   //init_usart2();
    tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
-   tic_exit_safe_start(USART2); //TODO: May need to put this somewhere else
+   //tic_exit_safe_start(USART2); //TODO: May need to put this somewhere else
    tic_energize(USART1);        //TODO: May need to put this somewhere else
-   tic_energize(USART2);        //TODO: May need to put this somewhere else
+   //tic_energize(USART2);        //TODO: May need to put this somewhere else
    //tic_set_target_position(USART1, 5000);
    
 
