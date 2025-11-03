@@ -910,22 +910,22 @@ int main(void) {
 
    //TEST SCORING SYSTEM
 
-   /*
+   
    enable_ports();
    init_adc();
    init_tim2();
    init_tim7();
-   */
+   
 
 
 
    //TEST ROTATIONAL MOTOR
 
    /*
-   int degrees = 2000;
+   int degrees = 360;
 
    enable_rotational_motor_ports();
-   spin(degrees);
+   spin_motor1(degrees);
    init_tim3();
    */
 
@@ -985,7 +985,7 @@ int main(void) {
    */
 
    //Linear Motors
-   
+   /*
    init_usart1();
    //init_usart3();
    tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
@@ -993,7 +993,22 @@ int main(void) {
    tic_energize(USART1);        //TODO: May need to put this somewhere else
    //tic_energize(USART3);        //TODO: May need to put this somewhere else
    tic_set_target_position(USART1, -5000);
-   
+   //tic_set_target_position(USART3, 5000);
+   */
+
+   /*
+   init_usart1();
+   tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
+   tic_energize(USART1);        //TODO: May need to put this somewhere else
+   tic_set_target_position(USART1, -5000);
+   */   
+
+   /*
+   init_usart3();
+   tic_exit_safe_start(USART3); //TODO: May need to put this somewhere else
+   tic_energize(USART3);        //TODO: May need to put this somewhere else
+   tic_set_target_position(USART3, 5000);
+   */
 
    //Pi Communication
    /*
