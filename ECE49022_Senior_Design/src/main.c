@@ -556,29 +556,29 @@ volatile bool is_rotating2 = false;
 void TIM14_IRQHandler(void) {
    TIM14->SR &= ~TIM_SR_UIF;
 
-   if ((GPIOB->IDR & 0x0004) && is_waiting_for_next_pulse1) { //pulse is high, count new pulse
+   if ((GPIOB->IDR & 0x0004) && is_waiting_for_next_pulse2) { //pulse is high, count new pulse
       num_pulses1 += 1;
-      is_waiting_for_next_pulse1 = false;
+      is_waiting_for_next_pulse2 = false;
    }
    else if (!(GPIOB->IDR & 0x0004)) { //pulse is low, so waiting for next pulse
-      is_waiting_for_next_pulse1 = true;
+      is_waiting_for_next_pulse2 = true;
    }
 
-   if (!(GPIOB->ODR & 0x0001) && num_pulses1 < pulse_target1 && clockwise1) { //if cw rotation and rotation has not been started, start cw
+   if (!(GPIOB->ODR & 0x0001) && num_pulses2 < pulse_target2 && clockwise2) { //if cw rotation and rotation has not been started, start cw
       GPIOB->ODR = 0x0001;
       is_rotating2 = true;
    }
-   else if (!(GPIOB->ODR & 0x0002) && num_pulses1 < pulse_target1 && (!clockwise1)) { //if ccw rotation and rotation has not been started, start ccw
+   else if (!(GPIOB->ODR & 0x0002) && num_pulses2 < pulse_target2 && (!clockwise2)) { //if ccw rotation and rotation has not been started, start ccw
       GPIOB->ODR = 0x0003;
       is_rotating2 = true;
    }
-   else if (!(GPIOB->ODR == 0x0002) && num_pulses1 >= pulse_target1 && clockwise1) { //stop cw rotation
+   else if (!(GPIOB->ODR == 0x0002) && num_pulses2 >= pulse_target2 && clockwise2) { //stop cw rotation
       GPIOB->ODR = 0x0003;
       nano_wait(5000000);
       GPIOB->ODR = 0x0002;
       is_rotating2 = false; //TODO: may need to change this since motor does not instantly stop
    }
-   else if (!(GPIOB->ODR == 0x0000) && num_pulses1 >= pulse_target1 && (!clockwise1)) { //stop ccw rotation
+   else if (!(GPIOB->ODR == 0x0000) && num_pulses2 >= pulse_target2 && (!clockwise2)) { //stop ccw rotation
       GPIOB->ODR = 0x0001;
       nano_wait(5000000);
       GPIOB->ODR = 0x0000;
@@ -587,7 +587,7 @@ void TIM14_IRQHandler(void) {
 }
 
 void init_tim14(void) {
-   RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+   RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 
    TIM14->PSC = 47;  
    TIM14->ARR = 499; 
@@ -666,35 +666,38 @@ void init_usart1(void) {
    }
 }
 
-void init_usart2(void) {
+void init_usart3(void) {
     // --- Enable clocks ---
-    RCC->AHBENR  |= RCC_AHBENR_GPIOAEN;    // Enable GPIOA clock
+    RCC->AHBENR  |= RCC_AHBENR_GPIOBEN;    // Enable GPIOB clock
 
-    // --- Configure PA14 (TX) and PA15 (RX) as AF1 ---
-    GPIOA->MODER &= ~((3 << (14 * 2)) | (3 << (15 * 2))); // clear mode bits
-    GPIOA->MODER |=  ((2 << (14 * 2)) | (2 << (15 * 2))); // set AF mode
+    // --- Configure PB10 (TX) and PB11 (RX) as AF1 ---
+    GPIOB->MODER &= ~((3 << (10 * 2)) | (3 << (11 * 2))); // clear mode bits
+    GPIOB->MODER |=  ((2 << (10 * 2)) | (2 << (11 * 2))); // set AF mode
 
-    GPIOA->AFR[1] &= ~((0xF << ((14 - 8) * 4)) | (0xF << ((15 - 8) * 4))); // clear AF
-    GPIOA->AFR[1] |=  ((0x1 << ((14 - 8) * 4)) | (0x1 << ((15 - 8) * 4))); // AF1 for USART2
+    GPIOB->AFR[1] &= ~((0xF << ((10 - 8) * 4)) | (0xF << ((11 - 8) * 4))); // clear AF
+    GPIOB->AFR[1] |=  ((0x1 << ((10 - 8) * 4)) | (0x1 << ((11 - 8) * 4))); // AF1 = USART3
 
-    RCC->APB1ENR |= RCC_APB1ENR_USART2EN;  // Enable USART2 clock
-    
-    // --- Configure USART2 ---
-    USART2->CR1 &= ~USART_CR1_UE;   // Disable before config
+    RCC->APB1ENR |= RCC_APB1ENR_USART3EN;  // Enable USART3 clock
 
-    USART2->CR1 &= ~((1 << 28) | (1 << 12));  // 8-bit data, no advanced features
-    USART2->CR2 &= ~(3 << 12);                // 1 stop bit
-    USART2->CR1 &= ~(1 << 10);                // No parity
-    USART2->CR1 &= ~(1 << 15);                // 16x oversampling
+    // --- Configure USART3 ---
+    USART3->CR1 &= ~USART_CR1_UE;   // Disable before config
+
+    USART3->CR1 &= ~((1 << 28) | (1 << 12));  // 8-bit data, no advanced features
+    USART3->CR2 &= ~(3 << 12);                // 1 stop bit
+    USART3->CR1 &= ~(1 << 10);                // No parity
+    USART3->CR1 &= ~(1 << 15);                // 16x oversampling
 
     // --- Baud rate ---
-    USART2->BRR = SYS_CLK_HZ / BAUDRATE / 36;      // e.g., 48MHz / 115200 = 416 (0x1A0)
+    USART3->BRR = SYS_CLK_HZ / BAUDRATE / 36;  // same formula as your USART2
 
-    USART2->CR1 |= USART_CR1_TE | USART_CR1_RE; // Enable TX and RX
-    USART2->CR1 |= USART_CR1_UE;                // Enable USART
+    // Enable TX and RX
+    USART3->CR1 |= USART_CR1_TE | USART_CR1_RE;
 
-    // --- Wait for TEACK and REACK ---
-    while ((USART2->ISR & (USART_ISR_TEACK | USART_ISR_REACK)) != (USART_ISR_TEACK | USART_ISR_REACK)) {
+    // Enable USART
+    USART3->CR1 |= USART_CR1_UE;
+
+    // Wait for TEACK and REACK
+    while ((USART3->ISR & (USART_ISR_TEACK | USART_ISR_REACK)) != (USART_ISR_TEACK | USART_ISR_REACK)) {
     }
 }
 
@@ -984,18 +987,23 @@ int main(void) {
    //Linear Motors
    
    init_usart1();
-   //init_usart2();
+   //init_usart3();
    tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
-   //tic_exit_safe_start(USART2); //TODO: May need to put this somewhere else
+   //tic_exit_safe_start(USART3); //TODO: May need to put this somewhere else
    tic_energize(USART1);        //TODO: May need to put this somewhere else
-   //tic_energize(USART2);        //TODO: May need to put this somewhere else
-   //tic_set_target_position(USART1, 5000);
+   //tic_energize(USART3);        //TODO: May need to put this somewhere else
+   tic_set_target_position(USART1, -5000);
    
 
    //Pi Communication
    /*
    init_usart5(); //also enables USART3_8
    init_tim6();
+   */
+
+   /*
+   while (1) {
+   }
    */
 
    return EXIT_SUCCESS;
