@@ -688,7 +688,7 @@ void init_usart3(void) {
     USART3->CR1 &= ~(1 << 15);                // 16x oversampling
 
     // --- Baud rate ---
-    USART3->BRR = SYS_CLK_HZ / BAUDRATE / 36;  // same formula as your USART2
+    USART3->BRR = SYS_CLK_HZ / BAUDRATE / 36;  // same formula as your USART3
 
     // Enable TX and RX
     USART3->CR1 |= USART_CR1_TE | USART_CR1_RE;
@@ -726,8 +726,11 @@ void init_usart5(void) {
     // Baud rate
     USART5->BRR = SYS_CLK_HZ / BAUDRATE / 36;
 
-    // Enable RX (we’ll leave TX off unless you want it)
-    USART5->CR1 |= USART_CR1_RE;
+    // Enable RX and Tx
+    USART5->CR1 |= USART_CR1_RE | USART_CR1_TE;
+
+    // Enable RX interrupt so USART3_8_IRQHandler() will fire
+    USART5->CR1 |= USART_CR1_RXNEIE;
 
     // Enable USART
     USART5->CR1 |= USART_CR1_UE;
@@ -738,20 +741,6 @@ void init_usart5(void) {
 
     NVIC_EnableIRQ(USART3_8_IRQn);
 }
-
-/*
-void usart1_send_byte(uint8_t data) {
-    while (!(USART1->ISR & USART_ISR_TXE)) { // Wait until TX empty
-    }
-      USART1->TDR = data;
-}
-
-void usart2_send_byte(uint8_t data) {
-    while (!(USART2->ISR & USART_ISR_TXE)) { // Wait until TX empty
-    }
-    USART2->TDR = data;
-}
-*/
 
 void usart_send_byte(USART_TypeDef *USARTx, uint8_t byte) {
     while (!(USARTx->ISR & USART_ISR_TXE)) {
@@ -862,13 +851,13 @@ void handle_data_from_pi(void) {
 
    switch (motor_id) {
       case MOTOR_LINEAR_1:
-         if (!(is_motor_busy(USART1))) {
-            tic_set_target_position(USART1, target);
-         }
+         //if (!(is_motor_busy(USART1))) {
+         tic_set_target_position(USART1, target);
+         //}
          break;
       case MOTOR_LINEAR_2:
-         if (!(is_motor_busy(USART2))) {
-            tic_set_target_position(USART2, target);
+         if (!(is_motor_busy(USART3))) {
+            tic_set_target_position(USART3, target);
          }
          break;
       case MOTOR_ROT_1:
@@ -887,7 +876,7 @@ void handle_data_from_pi(void) {
 }
 
 void TIM6_IRQHandler(void) {
-   TIM7->SR &= ~TIM_SR_UIF;
+   TIM6->SR &= ~TIM_SR_UIF;
    handle_data_from_pi();
 }
 
@@ -910,12 +899,12 @@ int main(void) {
 
    //TEST SCORING SYSTEM
 
-   
+   /*
    enable_ports();
    init_adc();
    init_tim2();
    init_tim7();
-   
+   */
 
 
 
@@ -928,6 +917,7 @@ int main(void) {
    spin_motor1(degrees);
    init_tim3();
    */
+   
 
    
 
@@ -1000,8 +990,8 @@ int main(void) {
    init_usart1();
    tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
    tic_energize(USART1);        //TODO: May need to put this somewhere else
-   tic_set_target_position(USART1, -5000);
-   */   
+   tic_set_target_position(USART1, 5000);
+   */ 
 
    /*
    init_usart3();
@@ -1016,9 +1006,17 @@ int main(void) {
    init_tim6();
    */
 
+
    /*
-   while (1) {
-   }
+   init_usart5(); //also enables USART3_8
+   init_usart1();
+   tic_exit_safe_start(USART1); 
+   nano_wait(10000);
+   tic_energize(USART1); 
+   nano_wait(10000);
+   uint8_t cmd[3] = {0, 0, 0};
+   usart_send_array(USART5, cmd, 3);
+   init_tim6();
    */
 
    return EXIT_SUCCESS;
