@@ -852,13 +852,15 @@ void handle_data_from_pi(void) {
    switch (motor_id) {
       case MOTOR_LINEAR_1:
          //if (!(is_motor_busy(USART1))) {
+         tic_exit_safe_start(USART1);
          tic_set_target_position(USART1, target);
          //}
          break;
       case MOTOR_LINEAR_2:
-         if (!(is_motor_busy(USART3))) {
-            tic_set_target_position(USART3, target);
-         }
+         //if (!(is_motor_busy(USART3))) {
+         tic_exit_safe_start(USART3);
+         tic_set_target_position(USART3, target);
+         //}
          break;
       case MOTOR_ROT_1:
          if (!(is_rotating1)) {
@@ -990,8 +992,9 @@ int main(void) {
    init_usart1();
    tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
    tic_energize(USART1);        //TODO: May need to put this somewhere else
+   nano_wait(1000);
    tic_set_target_position(USART1, 5000);
-   */ 
+   */
 
    /*
    init_usart3();
@@ -1006,18 +1009,34 @@ int main(void) {
    init_tim6();
    */
 
-
-   /*
+   
    init_usart5(); //also enables USART3_8
+   init_tim6();
    init_usart1();
    tic_exit_safe_start(USART1); 
    nano_wait(10000);
    tic_energize(USART1); 
-   nano_wait(10000);
-   uint8_t cmd[3] = {0, 0, 0};
-   usart_send_array(USART5, cmd, 3);
-   init_tim6();
+   nano_wait(100000);
+
+   uint8_t cmd1[3] = {0, 0b10001000, 0b00010011};   //5000
+   //uint8_t cmd1[3] = {0, 0, 0};                   //0
+   //uint8_t cmd1[3] = {0, 0b01111000, 0b11101100}; //-5000   
+   usart_send_array(USART5, cmd1, 3);
+
+   /*
+   nano_wait(100000000);
+   //tic_exit_safe_start(USART1); 
+   uint8_t cmd2[3] = {0, 0, 0};                   //0
+   usart_send_array(USART5, cmd2, 3); 
    */
+   
+   nano_wait(50000000);
+   //tic_exit_safe_start(USART1);
+   uint8_t cmd3[3] = {0, 0b01111000, 0b11101100}; //-5000 
+   //uint8_t cmd3[3] = {0, 0b10001000, 0b00010011};   //5000
+   usart_send_array(USART5, cmd3, 3);
+   
+   
 
    return EXIT_SUCCESS;
 }
