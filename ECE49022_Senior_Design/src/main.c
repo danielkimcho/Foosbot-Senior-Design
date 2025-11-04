@@ -1018,25 +1018,27 @@ int main(void) {
    tic_energize(USART1); 
    nano_wait(100000);
 
+   /*
    uint8_t cmd1[3] = {0, 0b10001000, 0b00010011};   //5000
    //uint8_t cmd1[3] = {0, 0, 0};                   //0
    //uint8_t cmd1[3] = {0, 0b01111000, 0b11101100}; //-5000   
    usart_send_array(USART5, cmd1, 3);
+   */
 
    /*
    nano_wait(100000000);
-   //tic_exit_safe_start(USART1); 
+   tic_exit_safe_start(USART1); 
    uint8_t cmd2[3] = {0, 0, 0};                   //0
    usart_send_array(USART5, cmd2, 3); 
    */
    
+   /*
    nano_wait(50000000);
-   //tic_exit_safe_start(USART1);
+   tic_exit_safe_start(USART1);
    uint8_t cmd3[3] = {0, 0b01111000, 0b11101100}; //-5000 
    //uint8_t cmd3[3] = {0, 0b10001000, 0b00010011};   //5000
    usart_send_array(USART5, cmd3, 3);
+   */
    
-   
-
    return EXIT_SUCCESS;
 }
