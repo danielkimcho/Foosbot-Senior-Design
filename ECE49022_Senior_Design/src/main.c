@@ -848,6 +848,8 @@ void handle_data_from_pi(void) {
    usart5_read_byte_nonblocking(&data2);
 
    int16_t target = (int16_t)((data2 << 8) | data1);
+   //printf("%d", motor_id);
+   //printf("%d", target);
 
    switch (motor_id) {
       case MOTOR_LINEAR_1:
@@ -1017,6 +1019,15 @@ int main(void) {
    nano_wait(10000);
    tic_energize(USART1); 
    nano_wait(100000);
+
+   /*
+   uint16_t extension_num = -5000;
+
+   uint8_t cmd1[3] = {0, (extension_num & 0xff), ((extension_num >> 8) & 0xff)};   //5000
+
+   //uint8_t cmd1[3] = {0, 0, 0};                   //0
+   //uint8_t cmd1[3] = {0, 0b01111000, 0b11101100}; //-5000   
+   */
 
    /*
    uint8_t cmd1[3] = {0, 0b10001000, 0b00010011};   //5000
