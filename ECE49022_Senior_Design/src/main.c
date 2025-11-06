@@ -700,12 +700,15 @@ void handle_data_from_pi(void) {
          //if (!(is_motor_busy(USART1))) {
          tic_exit_safe_start(USART1);
          tic_set_target_position(USART1, target);
+         //nano_wait(500000000);
+         //spin_motor1(360);
          //}
          break;
       case MOTOR_LINEAR_2:
          //if (!(is_motor_busy(USART3))) {
          tic_exit_safe_start(USART3);
          tic_set_target_position(USART3, target);
+         //spin_motor2(360);
          //}
          break;
       case MOTOR_ROT_1:
@@ -819,7 +822,7 @@ int main(void) {
    
    enable_rotational_motor_ports();
    init_tim3();
-   //init_tim14();
+   init_tim14();
    
 
    //Linear Motors
@@ -859,9 +862,12 @@ int main(void) {
    init_usart5(); //also enables USART3_8
    init_tim6();
    init_usart1();
+   //init_usart3();
    tic_exit_safe_start(USART1); 
+   //tic_exit_safe_start(USART3); 
    nano_wait(10000);
    tic_energize(USART1); 
+   //tic_energize(USART3); 
    nano_wait(100000);
 
    /*
