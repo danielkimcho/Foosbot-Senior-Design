@@ -818,11 +818,13 @@ int main(void) {
    init_tim7();
    */
 
+   
    //Rotation Motors
    
    enable_rotational_motor_ports();
    init_tim3();
-   init_tim14();
+   //init_tim14();
+   
    
 
    //Linear Motors
@@ -859,6 +861,7 @@ int main(void) {
    */
 
    
+   
    init_usart5(); //also enables USART3_8
    init_tim6();
    init_usart1();
@@ -869,6 +872,7 @@ int main(void) {
    tic_energize(USART1); 
    //tic_energize(USART3); 
    nano_wait(100000);
+   
 
    /*
    uint16_t extension_num = -5000;
