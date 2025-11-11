@@ -516,7 +516,7 @@ void init_usart3(void) {
     RCC->AHBENR  |= RCC_AHBENR_GPIOBEN;    // Enable GPIOB clock
 
     // --- Configure PB10 (TX) and PB11 (RX) as AF1 ---
-    GPIOB->MODER &= ~((3 << (10 * 2)) | (3 << (11 * 2))); // clear mode bits
+    GPIOB->MODER &= ~((3 << (10 * 2)) | (3 << (11 * 2) )); // clear mode bits
     GPIOB->MODER |=  ((2 << (10 * 2)) | (2 << (11 * 2))); // set AF mode
 
     GPIOB->AFR[1] &= ~((0xF << ((10 - 8) * 4)) | (0xF << ((11 - 8) * 4))); // clear AF
