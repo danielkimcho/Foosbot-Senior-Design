@@ -478,6 +478,7 @@ void init_usart1(void) {
     // --- Configure PA9 (TX) and PA10 (RX) as AF1 ---
     GPIOA->MODER &= ~((3 << (9 * 2)) | (3 << (10 * 2))); // clear mode
     GPIOA->MODER |=  ((2 << (9 * 2)) | (2 << (10 * 2))); // AF mode
+
     GPIOA->AFR[1] &= ~((0xF << ((9 - 8) * 4)) | (0xF << ((10 - 8) * 4)));
     GPIOA->AFR[1] |=  ((0x1 << ((9 - 8) * 4)) | (0x1 << ((10 - 8) * 4))); // AF1
 
@@ -519,7 +520,7 @@ void init_usart3(void) {
     GPIOB->MODER |=  ((2 << (10 * 2)) | (2 << (11 * 2))); // set AF mode
 
     GPIOB->AFR[1] &= ~((0xF << ((10 - 8) * 4)) | (0xF << ((11 - 8) * 4))); // clear AF
-    GPIOB->AFR[1] |=  ((0x1 << ((10 - 8) * 4)) | (0x1 << ((11 - 8) * 4))); // AF1 = USART3
+    GPIOB->AFR[1] |= ((0x4 << ((10 - 8) * 4)) | (0x4 << ((11 - 8) * 4))); // AF4
 
     RCC->APB1ENR |= RCC_APB1ENR_USART3EN;  // Enable USART3 clock
 
@@ -822,8 +823,8 @@ int main(void) {
    //Rotation Motors
    
    enable_rotational_motor_ports();
-   init_tim3();
-   //init_tim14();
+   init_tim3(); //rotational 1
+   init_tim14(); //rotational 2
    
    
 
@@ -862,15 +863,15 @@ int main(void) {
 
    
    
-   init_usart5(); //also enables USART3_8
-   init_tim6();
-   init_usart1();
-   //init_usart3();
-   tic_exit_safe_start(USART1); 
-   //tic_exit_safe_start(USART3); 
+   init_usart5(); //also enables USART3_8  //good
+   init_tim6();                            //good
+   init_usart1(); //linear 1               //good
+   init_usart3(); //linear 2
+   tic_exit_safe_start(USART1); //linear 1 //good
+   tic_exit_safe_start(USART3); //linear 2
    nano_wait(10000);
-   tic_energize(USART1); 
-   //tic_energize(USART3); 
+   tic_energize(USART1); //linear 1        //good
+   tic_energize(USART3); //linear 2 
    nano_wait(100000);
    
 
