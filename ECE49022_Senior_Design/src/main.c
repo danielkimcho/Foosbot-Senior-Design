@@ -398,7 +398,7 @@ void TIM14_IRQHandler(void) {
    TIM14->SR &= ~TIM_SR_UIF;
 
    if ((GPIOB->IDR & 0x0004) && is_waiting_for_next_pulse2) { //pulse is high, count new pulse
-      num_pulses1 += 1;
+      num_pulses2 += 1;
       is_waiting_for_next_pulse2 = false;
    }
    else if (!(GPIOB->IDR & 0x0004)) { //pulse is low, so waiting for next pulse
@@ -751,12 +751,10 @@ int main(void) {
 
    //TEST SCORING SYSTEM
 
-   /*
    enable_ports();
    init_adc();
    init_tim2();
    init_tim7();
-   */
 
 
 
@@ -862,7 +860,7 @@ int main(void) {
    */
 
    
-   
+   /*//////////
    init_usart5(); //also enables USART3_8  //good
    init_tim6();                            //good
    init_usart1(); //linear 1               //good
@@ -873,6 +871,25 @@ int main(void) {
    tic_energize(USART1); //linear 1        //good
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
+   *////////////
+      
+   init_usart5(); //also enables USART3_8  //good
+   init_tim6();                            //good
+   init_usart1(); //linear 1               //good
+   init_usart3(); //linear 2
+   tic_exit_safe_start(USART1); //linear 1 //good
+   tic_exit_safe_start(USART3); //linear 2
+   nano_wait(10000);
+   tic_energize(USART1); //linear 1        //good
+   tic_energize(USART3); //linear 2 
+   nano_wait(100000);
+
+   spin_motor1(360);
+   spin_motor2(360);
+   tic_set_target_position(USART1, 5000);
+   tic_set_target_position(USART3, 5000);
+
+   //PB0, PB1, PB2
    
 
    /*
