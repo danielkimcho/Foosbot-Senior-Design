@@ -610,7 +610,7 @@ void tic_energize(USART_TypeDef *USARTx) {
     usart_send_byte(USARTx, cmd);
 }
 
-void tic_set_target_position(USART_TypeDef *USARTx, int16_t target) {
+void tic_set_target_position(USART_TypeDef *USARTx, int32_t target) {
     //uint8_t cmd[6];
     uint8_t command = 0xE0; // Set target position
     
@@ -750,12 +750,12 @@ void init_tim6(void) {
 int main(void) {
 
    //TEST SCORING SYSTEM
-
+   /* THIS WILL BE ON FOR FINAL PRODUCT
    enable_ports();
    init_adc();
    init_tim2();
    init_tim7();
-
+   */
 
 
    //TEST ROTATIONAL MOTOR
@@ -819,7 +819,7 @@ int main(void) {
 
    
    //Rotation Motors
-   
+   //THIS WILL BE ON FOR FINAL PRODUCT
    enable_rotational_motor_ports();
    init_tim3(); //rotational 1
    init_tim14(); //rotational 2
@@ -877,17 +877,26 @@ int main(void) {
    init_tim6();                            //good
    init_usart1(); //linear 1               //good
    init_usart3(); //linear 2
+   //nano_wait(50000);
    tic_exit_safe_start(USART1); //linear 1 //good
    tic_exit_safe_start(USART3); //linear 2
+   //nano_wait(50000);
    nano_wait(10000);
    tic_energize(USART1); //linear 1        //good
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
 
-   spin_motor1(360);
-   spin_motor2(360);
-   tic_set_target_position(USART1, 5000);
-   tic_set_target_position(USART3, 5000);
+   spin_motor1(-9000);
+   spin_motor2(-9000);
+   //tic_set_target_position(USART1, 5000); //[5000, -4350]!!!
+   //tic_set_target_position(USART3, 5000);
+
+   tic_set_target_position(USART1, -4350);
+   tic_set_target_position(USART3, -4350);
+
+
+   //uint8_t cmd[2] = {0xA2, 0x21};   //Get operation state
+   //usart_send_array(USART1, cmd, 2);
 
    //PB0, PB1, PB2
    
