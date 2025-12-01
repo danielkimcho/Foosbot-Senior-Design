@@ -375,13 +375,14 @@ void init_tim3(void) {
    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 
    TIM3->PSC = 47;  
-   TIM3->ARR = 999; 
+   TIM3->ARR = 999; //499
 
    TIM3->DIER |= TIM_DIER_UIE;
 
    TIM3->CR1 |= TIM_CR1_CEN;
 
    NVIC_EnableIRQ(TIM3_IRQn);
+   NVIC_SetPriority(TIM3_IRQn, 2);
 }
 
 void spin_motor1(int degrees) {
@@ -465,13 +466,14 @@ void init_tim14(void) {
    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 
    TIM14->PSC = 47;  
-   TIM14->ARR = 999; 
+   TIM14->ARR = 999; //499
 
    TIM14->DIER |= TIM_DIER_UIE;
 
    TIM14->CR1 |= TIM_CR1_CEN;
 
    NVIC_EnableIRQ(TIM14_IRQn);
+   NVIC_SetPriority(TIM14_IRQn, 2);
 }
 
 void spin_motor2(int degrees) {
@@ -768,13 +770,14 @@ void init_tim6(void) {
    RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
 
    TIM6->PSC = 47;  
-   TIM6->ARR = 999; 
+   TIM6->ARR = 99999; 
 
    TIM6->DIER |= TIM_DIER_UIE;
 
    TIM6->CR1 |= TIM_CR1_CEN;
 
    NVIC_EnableIRQ(TIM6_IRQn);
+   NVIC_SetPriority(TIM6_IRQn, 1);
 }
 
 
@@ -918,14 +921,14 @@ int main(void) {
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
 
-   spin_motor1(-90); //rotational motor with lin motor 2 (1)
-   spin_motor2(-90); //rotational motor with lin motor 1 (0)
+   //spin_motor1(-90); //rotational motor with lin motor 2 (1)
+   //spin_motor2(-90); //rotational motor with lin motor 1 (0)
 
    //tic_set_target_position(USART1, 5000); //[5000, -4350]!!! //closest lin motor (0)
    //tic_set_target_position(USART3, 5000); //furthest lin motor (1)
 
-   //tic_set_target_position(USART1, -4350); //closest lin motor (0)
-   //tic_set_target_position(USART3, -4350); //furthest lin motor (1)
+   tic_set_target_position(USART1, -4350); //closest lin motor (0)
+   tic_set_target_position(USART3, -4350); //furthest lin motor (1)
 
    //tic_set_target_position(USART1, 0); //closest lin motor (0)
    //tic_set_target_position(USART3, 0); //furthest lin motor (1)
