@@ -318,6 +318,8 @@ volatile uint16_t num_pulses1 = 0;
 volatile bool is_waiting_for_next_pulse1 = true;
 volatile bool clockwise1 = false;
 volatile bool is_rotating1 = false;
+volatile bool is_stopping1 = false;
+volatile uint16_t countdown1 = -1;
 
 void TIM3_IRQHandler(void) {
    TIM3->SR &= ~TIM_SR_UIF;
@@ -330,26 +332,41 @@ void TIM3_IRQHandler(void) {
       is_waiting_for_next_pulse1 = true;
    }
 
-   if (!(GPIOC->ODR & 0x0200) && (num_pulses1 < pulse_target1) && clockwise1) { //if cw rotation and rotation has not been started, start cw
+   if (is_stopping1 && (countdown1 > 0)) {
+      countdown1 = countdown1 - 1;
+   }
+   else if (countdown1 == 0) {
+      is_stopping1 = false;
+      countdown1 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
+      //countdown1 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
+      GPIOC->ODR = 0x0000;
+   }
+   else if (!(is_rotating1) && (num_pulses1 < pulse_target1) && clockwise1) { //if cw rotation and rotation has not been started, start cw GPIOC->ODR & 0x0200
       GPIOC->ODR = 0x0200;
       is_rotating1 = true;
    }
-   else if (!(GPIOC->ODR & 0x0400) && (num_pulses1 < pulse_target1) && (!clockwise1)) { //if ccw rotation and rotation has not been started, start ccw
+   else if (!(is_rotating1) && (num_pulses1 < pulse_target1) && (!clockwise1)) { //if ccw rotation and rotation has not been started, start ccw GPIOC->ODR & 0x0400
       GPIOC->ODR = 0x0600;
       is_rotating1 = true;
    }
-   else if (!(GPIOC->ODR == 0x0400) && (num_pulses1 >= pulse_target1) && clockwise1) { //stop cw rotation
+   else if (is_rotating1 && (num_pulses1 >= pulse_target1) && clockwise1) { //stop cw rotation !(GPIOC->ODR == 0x0400)
       GPIOC->ODR = 0x0600;
+      is_stopping1 = true;
+      countdown1 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
+      //countdown1 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
       //nano_wait(5000000);
-      nano_wait(500000);
-      GPIOC->ODR = 0x0400;
+      //nano_wait(500000);
+      //GPIOC->ODR = 0x0400;
       is_rotating1 = false; //TODO: may need to change this since motor does not instantly stop
    }
-   else if (!(GPIOC->ODR == 0x0000) && (num_pulses1 >= pulse_target1) && (!clockwise1)) { //stop ccw rotation
+   else if (is_rotating1 && (num_pulses1 >= pulse_target1) && (!clockwise1)) { //stop ccw rotation !(GPIOC->ODR == 0x0000)
       GPIOC->ODR = 0x0200;
+      is_stopping1 = true;
+      countdown1 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
+      //countdown1 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
       //nano_wait(5000000);
-      nano_wait(500000);
-      GPIOC->ODR = 0x0000;
+      //nano_wait(500000);
+      //GPIOC->ODR = 0x0000;
       is_rotating1 = false; //TODO: may need to change this since motor does not instantly stop
    }
 }
@@ -358,7 +375,7 @@ void init_tim3(void) {
    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 
    TIM3->PSC = 47;  
-   TIM3->ARR = 499; 
+   TIM3->ARR = 999; 
 
    TIM3->DIER |= TIM_DIER_UIE;
 
@@ -393,6 +410,8 @@ volatile uint16_t num_pulses2 = 0;
 volatile bool is_waiting_for_next_pulse2 = true;
 volatile bool clockwise2 = false;
 volatile bool is_rotating2 = false;
+volatile bool is_stopping2 = false;
+volatile uint16_t countdown2 = -1;
 
 void TIM14_IRQHandler(void) {
    TIM14->SR &= ~TIM_SR_UIF;
@@ -405,26 +424,39 @@ void TIM14_IRQHandler(void) {
       is_waiting_for_next_pulse2 = true;
    }
 
-   if (!(GPIOB->ODR & 0x0001) && num_pulses2 < pulse_target2 && clockwise2) { //if cw rotation and rotation has not been started, start cw
+   if (is_stopping2 && (countdown2 > 0)) {
+      countdown2 = countdown2 - 1;
+   }
+   else if (countdown2 == 0) {
+      is_stopping2 = false;
+      countdown2 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
+      //countdown2 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
+      GPIOB->ODR = 0x0000;
+   }
+   else if (!(is_rotating2) && num_pulses2 < pulse_target2 && clockwise2) { //if cw rotation and rotation has not been started, start cw GPIOB->ODR & 0x0001
       GPIOB->ODR = 0x0001;
       is_rotating2 = true;
    }
-   else if (!(GPIOB->ODR & 0x0002) && num_pulses2 < pulse_target2 && (!clockwise2)) { //if ccw rotation and rotation has not been started, start ccw
+   else if (!(is_rotating2) && num_pulses2 < pulse_target2 && (!clockwise2)) { //if ccw rotation and rotation has not been started, start ccw GPIOB->ODR & 0x0002
       GPIOB->ODR = 0x0003;
       is_rotating2 = true;
    }
-   else if (!(GPIOB->ODR == 0x0002) && num_pulses2 >= pulse_target2 && clockwise2) { //stop cw rotation
+   else if (is_rotating2 && num_pulses2 >= pulse_target2 && clockwise2) { //stop cw rotation !(GPIOB->ODR == 0x0002)
       GPIOB->ODR = 0x0003;
+      is_stopping2 = true;
+      countdown2 = 5;
       //nano_wait(5000000);
-      nano_wait(500000);
-      GPIOB->ODR = 0x0002;
+      //nano_wait(500000);
+      //GPIOB->ODR = 0x0002;
       is_rotating2 = false; //TODO: may need to change this since motor does not instantly stop
    }
-   else if (!(GPIOB->ODR == 0x0000) && num_pulses2 >= pulse_target2 && (!clockwise2)) { //stop ccw rotation
+   else if (is_rotating2 && num_pulses2 >= pulse_target2 && (!clockwise2)) { //stop ccw rotation !(GPIOB->ODR == 0x0000)
       GPIOB->ODR = 0x0001;
+      is_stopping2 = true;
+      countdown2 = 5;
       //nano_wait(5000000);
-      nano_wait(500000);
-      GPIOB->ODR = 0x0000;
+      //nano_wait(500000);
+      //GPIOB->ODR = 0x0000;
       is_rotating2 = false; //TODO: may need to change this since motor does not instantly stop
    }
 }
@@ -433,7 +465,7 @@ void init_tim14(void) {
    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 
    TIM14->PSC = 47;  
-   TIM14->ARR = 499; 
+   TIM14->ARR = 999; 
 
    TIM14->DIER |= TIM_DIER_UIE;
 
@@ -886,13 +918,17 @@ int main(void) {
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
 
-   spin_motor1(-9000);
-   spin_motor2(-9000);
-   //tic_set_target_position(USART1, 5000); //[5000, -4350]!!!
-   //tic_set_target_position(USART3, 5000);
+   spin_motor1(-90); //rotational motor with lin motor 2 (1)
+   spin_motor2(-90); //rotational motor with lin motor 1 (0)
 
-   tic_set_target_position(USART1, -4350);
-   tic_set_target_position(USART3, -4350);
+   //tic_set_target_position(USART1, 5000); //[5000, -4350]!!! //closest lin motor (0)
+   //tic_set_target_position(USART3, 5000); //furthest lin motor (1)
+
+   //tic_set_target_position(USART1, -4350); //closest lin motor (0)
+   //tic_set_target_position(USART3, -4350); //furthest lin motor (1)
+
+   //tic_set_target_position(USART1, 0); //closest lin motor (0)
+   //tic_set_target_position(USART3, 0); //furthest lin motor (1)
 
 
    //uint8_t cmd[2] = {0xA2, 0x21};   //Get operation state
