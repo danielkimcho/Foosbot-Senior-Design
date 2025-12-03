@@ -375,7 +375,7 @@ void init_tim3(void) {
    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
 
    TIM3->PSC = 47;  
-   TIM3->ARR = 999; //499
+   TIM3->ARR = 499; //999
 
    TIM3->DIER |= TIM_DIER_UIE;
 
@@ -466,7 +466,7 @@ void init_tim14(void) {
    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 
    TIM14->PSC = 47;  
-   TIM14->ARR = 999; //499
+   TIM14->ARR = 499; //999
 
    TIM14->DIER |= TIM_DIER_UIE;
 
@@ -782,6 +782,20 @@ void init_tim6(void) {
 
 
 
+
+
+/*
+int __io_putchar(int ch) {
+    // Simple version using USART1
+    while (!(USART1->ISR & USART_ISR_TXE))
+        ;
+    USART1->TDR = (uint8_t)ch;
+    return ch;
+}
+*/
+
+
+
 int main(void) {
 
    //TEST SCORING SYSTEM
@@ -792,124 +806,14 @@ int main(void) {
    init_tim7();
    */
 
-
-   //TEST ROTATIONAL MOTOR
-
-   /*
-   int degrees = 360;
-
-   enable_rotational_motor_ports();
-   spin_motor1(degrees);
-   init_tim3();
-   */
-   
-
-   
-
-   //UNUSED LINEAR MOTOR TEST:
-
-   //int direction = -1;
-   //int mm = 25.4; //25.4;
-   //enable_linear_motor_ports();
-   //////set_direction_and_distance(direction, mm);
-   //start_tim1_stepper();
-   //while (TIM1->CR1 & TIM_CR1_CEN) {
-      // wait for motion to finish
-   //}
-   //init_tim14();
-
-
-
-   //TEST LINEAR MOTOR
-
-   /*
-   init_usart1();
-   //nano_wait(1000000);
-
-   tic_exit_safe_start();
-   //nano_wait(50000);
-   tic_energize();
-   //nano_wait(50000);
-   tic_set_target_position(0, -5000);
-   nano_wait(1000000000);
-
-   tic_exit_safe_start();
-   tic_set_target_position(0, 5000);
-
-   //target_position in range of -5000 to 5000
-   */
-
-
-
-
-   //START EVERYTHING
-
-   //Scoring System
-   /*
-   enable_ports();
-   init_adc();
-   init_tim2();
-   init_tim7();
-   */
-
-   
    //Rotation Motors
    //THIS WILL BE ON FOR FINAL PRODUCT
    enable_rotational_motor_ports();
    init_tim3(); //rotational 1
    init_tim14(); //rotational 2
-   
-   
-
-   //Linear Motors
-   /*
-   init_usart1();
-   //init_usart3();
-   tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
-   //tic_exit_safe_start(USART3); //TODO: May need to put this somewhere else
-   tic_energize(USART1);        //TODO: May need to put this somewhere else
-   //tic_energize(USART3);        //TODO: May need to put this somewhere else
-   tic_set_target_position(USART1, -5000);
-   //tic_set_target_position(USART3, 5000);
-   */
-
-   /*
-   init_usart1();
-   tic_exit_safe_start(USART1); //TODO: May need to put this somewhere else
-   tic_energize(USART1);        //TODO: May need to put this somewhere else
-   nano_wait(1000);
-   tic_set_target_position(USART1, 5000);
-   */
-
-   /*
-   init_usart3();
-   tic_exit_safe_start(USART3); //TODO: May need to put this somewhere else
-   tic_energize(USART3);        //TODO: May need to put this somewhere else
-   tic_set_target_position(USART3, 5000);
-   */
-
-   //Pi Communication
-   /*
-   init_usart5(); //also enables USART3_8
-   init_tim6();
-   */
-
-   
-   /*//////////
-   init_usart5(); //also enables USART3_8  //good
-   init_tim6();                            //good
-   init_usart1(); //linear 1               //good
-   init_usart3(); //linear 2
-   tic_exit_safe_start(USART1); //linear 1 //good
-   tic_exit_safe_start(USART3); //linear 2
-   nano_wait(10000);
-   tic_energize(USART1); //linear 1        //good
-   tic_energize(USART3); //linear 2 
-   nano_wait(100000);
-   *////////////
       
    init_usart5(); //also enables USART3_8  //good
-   init_tim6();                            //good
+   //init_tim6();                            //good
    init_usart1(); //linear 1               //good
    init_usart3(); //linear 2
    //nano_wait(50000);
@@ -921,14 +825,60 @@ int main(void) {
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
 
-   //spin_motor1(-90); //rotational motor with lin motor 2 (1)
-   //spin_motor2(-90); //rotational motor with lin motor 1 (0)
+   //spin_motor1(-10000000); //rotational motor with lin motor 2 (2)
+   //spin_motor2(-10000000); //rotational motor with lin motor 1 (3)
+
+   
+
+   tic_set_target_position(USART1, -5000); //[5000, -4350]!!! //closest lin motor (0)
+   tic_set_target_position(USART3, -5000); 
+   nano_wait(100000000);
+   tic_exit_safe_start(USART1); //linear 1 //good
+   tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   tic_set_target_position(USART1, 5000); //closest lin motor (0)
+   tic_set_target_position(USART3, 5000);
+   nano_wait(100000000);
+   tic_exit_safe_start(USART1); //linear 1 //good
+   tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   tic_set_target_position(USART1, -5000); //[5000, -4350]!!! //closest lin motor (0)
+   tic_set_target_position(USART3, -5000);
+   nano_wait(100000000);
+   tic_exit_safe_start(USART1); //linear 1 //good
+   tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   tic_set_target_position(USART1, 5000); //closest lin motor (0)
+   tic_set_target_position(USART3, 5000);
+   nano_wait(100000000);
+   tic_exit_safe_start(USART1); //linear 1 //good
+   tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   tic_set_target_position(USART1, -5000); //[5000, -4350]!!! //closest lin motor (0)
+   tic_set_target_position(USART3, -5000);
+   nano_wait(100000000);
+   tic_exit_safe_start(USART1); //linear 1 //good
+   tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   tic_set_target_position(USART1, 5000); //closest lin motor (0)
+   tic_set_target_position(USART3, 5000);
+   nano_wait(100000000);
+   tic_exit_safe_start(USART1); //linear 1 //good
+   tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   tic_set_target_position(USART1, -5000); //[5000, -4350]!!! //closest lin motor (0)
+   tic_set_target_position(USART3, -5000);
+   nano_wait(100000000);
+   tic_exit_safe_start(USART1); //linear 1 //good
+   tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   
 
    //tic_set_target_position(USART1, 5000); //[5000, -4350]!!! //closest lin motor (0)
    //tic_set_target_position(USART3, 5000); //furthest lin motor (1)
 
-   tic_set_target_position(USART1, -4350); //closest lin motor (0)
-   tic_set_target_position(USART3, -4350); //furthest lin motor (1)
+   //tic_set_target_position(USART1, -4350); //closest lin motor (0)
+   //tic_set_target_position(USART3, -4350); //furthest lin motor (1)
 
    //tic_set_target_position(USART1, 0); //closest lin motor (0)
    //tic_set_target_position(USART3, 0); //furthest lin motor (1)
@@ -938,38 +888,6 @@ int main(void) {
    //usart_send_array(USART1, cmd, 2);
 
    //PB0, PB1, PB2
-   
-
-   /*
-   uint16_t extension_num = -5000;
-
-   uint8_t cmd1[3] = {0, (extension_num & 0xff), ((extension_num >> 8) & 0xff)};   //5000
-
-   //uint8_t cmd1[3] = {0, 0, 0};                   //0
-   //uint8_t cmd1[3] = {0, 0b01111000, 0b11101100}; //-5000   
-   */
-
-   /*
-   uint8_t cmd1[3] = {0, 0b10001000, 0b00010011};   //5000
-   //uint8_t cmd1[3] = {0, 0, 0};                   //0
-   //uint8_t cmd1[3] = {0, 0b01111000, 0b11101100}; //-5000   
-   usart_send_array(USART5, cmd1, 3);
-   */
-
-   /*
-   nano_wait(100000000);
-   tic_exit_safe_start(USART1); 
-   uint8_t cmd2[3] = {0, 0, 0};                   //0
-   usart_send_array(USART5, cmd2, 3); 
-   */
-   
-   /*
-   nano_wait(50000000);
-   tic_exit_safe_start(USART1);
-   uint8_t cmd3[3] = {0, 0b01111000, 0b11101100}; //-5000 
-   //uint8_t cmd3[3] = {0, 0b10001000, 0b00010011};   //5000
-   usart_send_array(USART5, cmd3, 3);
-   */
    
    return EXIT_SUCCESS;
 }
