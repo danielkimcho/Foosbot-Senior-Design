@@ -120,8 +120,13 @@ void init_adc(void) {
    while (!(ADC1->ISR & ADC_ISR_ADRDY)) { //wait until ardy has been set (goes high)
    }
 
-   GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font['0']) << 1);
-   GPIOA->ODR = (GPIOA->ODR & 0xfe01) | ((uint16_t)(font['0']) << 1);
+   //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font['0']) << 1);
+   GPIOC->BSRR = (0x1FE << 16);                         // clear PC1–PC8
+   GPIOC->BSRR = ((uint16_t)(font['0']) << 1) & 0x1FE;  // set new segment bits
+
+   //GPIOA->ODR = (GPIOA->ODR & 0xfe01) | ((uint16_t)(font['0']) << 1);
+   GPIOA->BSRR = (0x1FE << 16);                         // clear PA1–PA8
+   GPIOA->BSRR = ((uint16_t)(font['0']) << 1) & 0x1FE;  // set new segment bits
 }
 
 uint16_t read_adc(uint32_t channel) {
@@ -141,7 +146,7 @@ uint16_t read_adc(uint32_t channel) {
    return ADC1->DR;
 }
 
-void victory_lap(volatile uint32_t* odr) {
+void victory_lap(volatile uint32_t* odr) { //FIX
    uint32_t segments[] = {
       (1 << 1), 
       (1 << 2), 
@@ -162,10 +167,14 @@ void victory_lap(volatile uint32_t* odr) {
 }
 
 void disable_interrupts() {
-   GPIOC->ODR &= 0xfe01;
-   GPIOA->ODR &= 0xfe01;
+   GPIOC->ODR &= 0xfe01; //FIX
+   GPIOA->ODR &= 0xfe01; //FIX
    NVIC_DisableIRQ(TIM2_IRQn);
    NVIC_DisableIRQ(TIM7_IRQn);
+   NVIC_DisableIRQ(TIM3_IRQn);
+   NVIC_DisableIRQ(TIM14_IRQn);
+   NVIC_DisableIRQ(USART3_8_IRQn);
+   NVIC_DisableIRQ(TIM6_IRQn);
 }
 
 volatile uint8_t consecutive_lows = 0; //number of times/ms in a row that the ball was detected
@@ -199,7 +208,9 @@ void TIM2_IRQHandler(void) {
             consecutive_highs = 0;
             lockout_ticks = 100; //wait lockout_ticks # ms before checking for goals again
             is_rearmed = false;
-            GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1); //output to PC1-PC8 for display
+            //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1); //output to PC1-PC8 for display //FIX
+            GPIOC->BSRR = (0x1FE << 16);                         // clear PA1–PA8
+            GPIOC->BSRR = ((uint16_t)(font[goals_detected + '0']) << 1) & 0x1FE;  // set new segment bits
          }
       }
       else { //high detected
@@ -264,7 +275,9 @@ void TIM7_IRQHandler(void) {
             consecutive_highs_2 = 0;
             lockout_ticks_2 = 100; //wait lockout_ticks # ms before checking for goals again
             is_rearmed_2 = false;
-            GPIOA->ODR = (GPIOA->ODR & 0xfe01) | ((uint16_t)(font[goals_detected_2 + '0']) << 1); //output to PC1-PC8 for display
+            //GPIOA->ODR = (GPIOA->ODR & 0xfe01) | ((uint16_t)(font[goals_detected_2 + '0']) << 1); //output to PC1-PC8 for display //FIX
+            GPIOA->BSRR = (0x1FE << 16);                         // clear PA1–PA8
+            GPIOA->BSRR = ((uint16_t)(font[goals_detected_2 + '0']) << 1) & 0x1FE;  // set new segment bits
          }
       }
       else { //high detected
@@ -339,18 +352,22 @@ void TIM3_IRQHandler(void) {
       is_stopping1 = false;
       countdown1 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
       //countdown1 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
-      GPIOC->ODR = 0x0000;
+      //GPIOC->ODR = 0x0000; //FIX
+      GPIOC->BSRR = ((1 << 9) | (1 << 10)) << 16;   // reset PC9, PC10
    }
    else if (!(is_rotating1) && (num_pulses1 < pulse_target1) && clockwise1) { //if cw rotation and rotation has not been started, start cw GPIOC->ODR & 0x0200
-      GPIOC->ODR = 0x0200;
+      //GPIOC->ODR = 0x0200; //FIX
+      GPIOC->BSRR = ((1 << 10) << 16) | (1 << 9);   // reset PC10, set PC9
       is_rotating1 = true;
    }
    else if (!(is_rotating1) && (num_pulses1 < pulse_target1) && (!clockwise1)) { //if ccw rotation and rotation has not been started, start ccw GPIOC->ODR & 0x0400
-      GPIOC->ODR = 0x0600;
+      //GPIOC->ODR = 0x0600; //FIX
+      GPIOC->BSRR = (1 << 9) | (1 << 10);           // set PC9, set PC10
       is_rotating1 = true;
    }
    else if (is_rotating1 && (num_pulses1 >= pulse_target1) && clockwise1) { //stop cw rotation !(GPIOC->ODR == 0x0400)
-      GPIOC->ODR = 0x0600;
+      //GPIOC->ODR = 0x0600; //FIX
+      GPIOC->BSRR = (1 << 9) | (1 << 10);           // set PC9, set PC10
       is_stopping1 = true;
       countdown1 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
       //countdown1 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
@@ -360,7 +377,8 @@ void TIM3_IRQHandler(void) {
       is_rotating1 = false; //TODO: may need to change this since motor does not instantly stop
    }
    else if (is_rotating1 && (num_pulses1 >= pulse_target1) && (!clockwise1)) { //stop ccw rotation !(GPIOC->ODR == 0x0000)
-      GPIOC->ODR = 0x0200;
+      //GPIOC->ODR = 0x0200; //FIX
+      GPIOC->BSRR = ((1 << 10) << 16) | (1 << 9);   // reset PC10, set PC9
       is_stopping1 = true;
       countdown1 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
       //countdown1 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
@@ -432,18 +450,22 @@ void TIM14_IRQHandler(void) {
       is_stopping2 = false;
       countdown2 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
       //countdown2 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
-      GPIOB->ODR = 0x0000;
+      //GPIOB->ODR = 0x0000; //FIX
+      GPIOB->BSRR = ((1 << 0) | (1 << 1)) << 16;    // reset PB0, PB1
    }
    else if (!(is_rotating2) && num_pulses2 < pulse_target2 && clockwise2) { //if cw rotation and rotation has not been started, start cw GPIOB->ODR & 0x0001
-      GPIOB->ODR = 0x0001;
+      //GPIOB->ODR = 0x0001; //FIX
+      GPIOB->BSRR = ((1 << 1) << 16) | (1 << 0);    // reset PB1, set PB0
       is_rotating2 = true;
    }
    else if (!(is_rotating2) && num_pulses2 < pulse_target2 && (!clockwise2)) { //if ccw rotation and rotation has not been started, start ccw GPIOB->ODR & 0x0002
-      GPIOB->ODR = 0x0003;
+      //GPIOB->ODR = 0x0003; //FIX
+      GPIOB->BSRR = (1 << 0) | (1 << 1);            // set PB0, set PB1
       is_rotating2 = true;
    }
    else if (is_rotating2 && num_pulses2 >= pulse_target2 && clockwise2) { //stop cw rotation !(GPIOB->ODR == 0x0002)
-      GPIOB->ODR = 0x0003;
+      //GPIOB->ODR = 0x0003; //FIX
+      GPIOB->BSRR = (1 << 0) | (1 << 1);            // set PB0, set PB1
       is_stopping2 = true;
       countdown2 = 5;
       //nano_wait(5000000);
@@ -452,7 +474,8 @@ void TIM14_IRQHandler(void) {
       is_rotating2 = false; //TODO: may need to change this since motor does not instantly stop
    }
    else if (is_rotating2 && num_pulses2 >= pulse_target2 && (!clockwise2)) { //stop ccw rotation !(GPIOB->ODR == 0x0000)
-      GPIOB->ODR = 0x0001;
+      //GPIOB->ODR = 0x0001; //FIX
+      GPIOB->BSRR = ((1 << 1) << 16) | (1 << 0);    // reset PB1, set PB0
       is_stopping2 = true;
       countdown2 = 5;
       //nano_wait(5000000);
@@ -734,6 +757,7 @@ void handle_data_from_pi(void) {
       case MOTOR_LINEAR_1:
          //if (!(is_motor_busy(USART1))) {
          tic_exit_safe_start(USART1);
+         //nano_wait(10000);
          tic_set_target_position(USART1, target);
          //nano_wait(500000000);
          //spin_motor1(360);
@@ -742,6 +766,7 @@ void handle_data_from_pi(void) {
       case MOTOR_LINEAR_2:
          //if (!(is_motor_busy(USART3))) {
          tic_exit_safe_start(USART3);
+         //nano_wait(10000);
          tic_set_target_position(USART3, target);
          //spin_motor2(360);
          //}
@@ -803,12 +828,13 @@ int main(void) {
    enable_ports();
    init_adc();
    init_tim2();
-   //init_tim7();
+   init_tim7();
+
    //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[9 + '0']) << 1);
    //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1);
    
 
-   /*
+   
    //Rotation Motors
    //THIS WILL BE ON FOR FINAL PRODUCT
    enable_rotational_motor_ports();
@@ -816,7 +842,7 @@ int main(void) {
    init_tim14(); //rotational 2
       
    init_usart5(); //also enables USART3_8  //good
-   //init_tim6();                            //good
+   init_tim6();                            //good
    init_usart1(); //linear 1               //good
    init_usart3(); //linear 2
    //nano_wait(50000);
@@ -828,6 +854,7 @@ int main(void) {
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
 
+   /*
    spin_motor1(-10000000); //rotational motor with lin motor 2 (2)
    spin_motor2(-10000000); //rotational motor with lin motor 1 (3)
    //tic_set_target_position(USART1, -5000);
