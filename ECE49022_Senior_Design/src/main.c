@@ -46,7 +46,7 @@ void update_display(int d1, int d2, int d3, int d4);
 uint16_t msg[8] = { 0x0000,0x0100,0x0200,0x0300,0x0400,0x0500,0x0600,0x0700 };
 
 #define EXIT_SUCCESS 0
-#define THRESHOLD 3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
+#define THRESHOLD 620 //3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
 #define PC0_CHANNEL ADC_CHSELR_CHSEL10
 #define PA0_CHANNEL ADC_CHSELR_CHSEL0
 
@@ -799,13 +799,16 @@ int __io_putchar(int ch) {
 int main(void) {
 
    //TEST SCORING SYSTEM
-   /* THIS WILL BE ON FOR FINAL PRODUCT
+   //THIS WILL BE ON FOR FINAL PRODUCT
    enable_ports();
    init_adc();
    init_tim2();
-   init_tim7();
-   */
+   //init_tim7();
+   //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[9 + '0']) << 1);
+   //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1);
+   
 
+   /*
    //Rotation Motors
    //THIS WILL BE ON FOR FINAL PRODUCT
    enable_rotational_motor_ports();
@@ -825,11 +828,12 @@ int main(void) {
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
 
-   //spin_motor1(-10000000); //rotational motor with lin motor 2 (2)
-   //spin_motor2(-10000000); //rotational motor with lin motor 1 (3)
-
+   spin_motor1(-10000000); //rotational motor with lin motor 2 (2)
+   spin_motor2(-10000000); //rotational motor with lin motor 1 (3)
+   //tic_set_target_position(USART1, -5000);
+   //tic_set_target_position(USART3, -5000);
    
-
+   
    tic_set_target_position(USART1, -5000); //[5000, -4350]!!! //closest lin motor (0)
    tic_set_target_position(USART3, -5000); 
    nano_wait(100000000);
@@ -872,6 +876,7 @@ int main(void) {
    tic_exit_safe_start(USART1); //linear 1 //good
    tic_exit_safe_start(USART3);
    nano_wait(10000);
+   */
    
 
    //tic_set_target_position(USART1, 5000); //[5000, -4350]!!! //closest lin motor (0)
