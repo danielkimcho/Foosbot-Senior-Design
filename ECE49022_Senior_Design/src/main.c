@@ -43,6 +43,11 @@ void init_tim16();
 void setup_bb();
 void update_display(int d1, int d2, int d3, int d4);
 
+
+void tic_set_target_position(USART_TypeDef *USARTx, int32_t target);
+void tic_exit_safe_start(USART_TypeDef *USARTx);
+void disable_interrupts(void);
+
 uint16_t msg[8] = { 0x0000,0x0100,0x0200,0x0300,0x0400,0x0500,0x0600,0x0700 };
 
 #define EXIT_SUCCESS 0
@@ -164,17 +169,6 @@ void victory_lap(volatile uint32_t* odr) { //FIX
    }
 
    *odr &= 0xfe01; 
-}
-
-void disable_interrupts() {
-   GPIOC->ODR &= 0xfe01; //FIX
-   GPIOA->ODR &= 0xfe01; //FIX
-   NVIC_DisableIRQ(TIM2_IRQn);
-   NVIC_DisableIRQ(TIM7_IRQn);
-   NVIC_DisableIRQ(TIM3_IRQn);
-   NVIC_DisableIRQ(TIM14_IRQn);
-   NVIC_DisableIRQ(USART3_8_IRQn);
-   NVIC_DisableIRQ(TIM6_IRQn);
 }
 
 volatile uint8_t consecutive_lows = 0; //number of times/ms in a row that the ball was detected
@@ -805,19 +799,49 @@ void init_tim6(void) {
    NVIC_SetPriority(TIM6_IRQn, 1);
 }
 
-
-
-
-
-/*
-int __io_putchar(int ch) {
-    // Simple version using USART1
-    while (!(USART1->ISR & USART_ISR_TXE))
-        ;
-    USART1->TDR = (uint8_t)ch;
-    return ch;
+void center_rods(void) {
+   /*
+   //RESET POSITION TO MIDDLE
+   tic_exit_safe_start(USART1); 
+   //tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   tic_set_target_position(USART1, 5000); 
+   //tic_set_target_position(USART3, 5000); 
+   nano_wait(1000000000);
+   tic_exit_safe_start(USART1); 
+   //tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   tic_set_target_position(USART1, -5000); 
+   //tic_set_target_position(USART3, -5000);
+   nano_wait(1000000000);
+   tic_exit_safe_start(USART1); 
+   //tic_exit_safe_start(USART3);
+   nano_wait(10000);
+   tic_set_target_position(USART1, 0); 
+   //tic_set_target_position(USART3, 0);*/
+   /*
+   tic_exit_safe_start(USART3); 
+   nano_wait(10000);
+   tic_set_target_position(USART3, 9000); 
+   nano_wait(1000000000);
+   tic_exit_safe_start(USART3); 
+   nano_wait(10000);
+   tic_set_target_position(USART3, 8000); */
 }
-*/
+
+void disable_interrupts() {
+   GPIOC->ODR &= 0xfe01; //FIX
+   GPIOA->ODR &= 0xfe01; //FIX
+   NVIC_DisableIRQ(TIM2_IRQn);
+   NVIC_DisableIRQ(TIM7_IRQn);
+   NVIC_DisableIRQ(TIM3_IRQn);
+   NVIC_DisableIRQ(TIM14_IRQn);
+   NVIC_DisableIRQ(USART3_8_IRQn);
+   NVIC_DisableIRQ(TIM6_IRQn);
+
+   center_rods();
+}
+
 
 
 
@@ -853,6 +877,11 @@ int main(void) {
    tic_energize(USART1); //linear 1        //good
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
+
+   //tic_set_target_position(USART1, -5000);
+   //tic_set_target_position(USART3, -5000);
+   //nano_wait(100000000);
+   center_rods();
 
    /*
    spin_motor1(-10000000); //rotational motor with lin motor 2 (2)
