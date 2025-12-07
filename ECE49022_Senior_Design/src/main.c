@@ -219,7 +219,7 @@ void TIM2_IRQHandler(void) {
       if (goals_detected > 9) { //check if game is finished
          disable_interrupts();
          victory_lap(&(GPIOC->ODR));
-         center_rods();
+         //center_rods();
          goals_detected = 0;
          is_game_done = true;
       }
@@ -287,7 +287,7 @@ void TIM7_IRQHandler(void) {
       if (goals_detected_2 > 9) { //check if game is finished
          disable_interrupts();
          victory_lap(&(GPIOA->ODR));
-         center_rods();
+         //center_rods();
          goals_detected_2 = 0;
          is_game_done_2 = true;
       }
@@ -844,7 +844,7 @@ int main(void) {
    //THIS WILL BE ON FOR FINAL PRODUCT
    enable_ports();
    init_adc();
-   //init_tim2();
+   init_tim2();
    init_tim7();
 
    //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[9 + '0']) << 1);
@@ -874,7 +874,8 @@ int main(void) {
    //tic_set_target_position(USART1, -5000);
    //tic_set_target_position(USART3, -5000);
    //nano_wait(100000000);
-   center_rods();
+   
+   //center_rods();
 
    /*
    spin_motor1(-10000000); //rotational motor with lin motor 2 (2)
