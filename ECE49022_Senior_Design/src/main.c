@@ -800,33 +800,25 @@ void init_tim6(void) {
 }
 
 void center_rods(void) {
-   /*
+   
    //RESET POSITION TO MIDDLE
    tic_exit_safe_start(USART1); 
-   //tic_exit_safe_start(USART3);
+   tic_exit_safe_start(USART3);
    nano_wait(10000);
    tic_set_target_position(USART1, 5000); 
-   //tic_set_target_position(USART3, 5000); 
-   nano_wait(1000000000);
+   tic_set_target_position(USART3, 5000); 
+   nano_wait(500000000);
    tic_exit_safe_start(USART1); 
-   //tic_exit_safe_start(USART3);
+   tic_exit_safe_start(USART3);
    nano_wait(10000);
    tic_set_target_position(USART1, -5000); 
-   //tic_set_target_position(USART3, -5000);
-   nano_wait(1000000000);
+   tic_set_target_position(USART3, -5000);
+   nano_wait(500000000);
    tic_exit_safe_start(USART1); 
-   //tic_exit_safe_start(USART3);
+   tic_exit_safe_start(USART3);
    nano_wait(10000);
    tic_set_target_position(USART1, 0); 
-   //tic_set_target_position(USART3, 0);*/
-   /*
-   tic_exit_safe_start(USART3); 
-   nano_wait(10000);
-   tic_set_target_position(USART3, 9000); 
-   nano_wait(1000000000);
-   tic_exit_safe_start(USART3); 
-   nano_wait(10000);
-   tic_set_target_position(USART3, 8000); */
+   tic_set_target_position(USART3, 0);
 }
 
 void disable_interrupts() {
