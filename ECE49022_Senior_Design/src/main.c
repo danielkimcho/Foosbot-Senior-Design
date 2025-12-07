@@ -51,7 +51,8 @@ void disable_interrupts(void);
 uint16_t msg[8] = { 0x0000,0x0100,0x0200,0x0300,0x0400,0x0500,0x0600,0x0700 };
 
 #define EXIT_SUCCESS 0
-#define THRESHOLD 620 //3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
+#define THRESHOLD_TIM2 620 //3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
+#define THRESHOLD_TIM7 620 //3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
 #define PC0_CHANNEL ADC_CHSELR_CHSEL10
 #define PA0_CHANNEL ADC_CHSELR_CHSEL0
 
@@ -193,7 +194,7 @@ void TIM2_IRQHandler(void) {
 
       uint16_t pc0 = read_adc(PC0_CHANNEL);
 
-      if (pc0 < THRESHOLD) { //low detected
+      if (pc0 < THRESHOLD_TIM2) { //low detected
          consecutive_lows = consecutive_lows + 1;
          consecutive_highs = 0;
          if (consecutive_lows > 4 && is_rearmed) { //low/ball detected for 20 ms straight
@@ -218,6 +219,7 @@ void TIM2_IRQHandler(void) {
       if (goals_detected > 9) { //check if game is finished
          disable_interrupts();
          victory_lap(&(GPIOC->ODR));
+         center_rods();
          goals_detected = 0;
          is_game_done = true;
       }
@@ -260,7 +262,7 @@ void TIM7_IRQHandler(void) {
 
       uint16_t pa0 = read_adc(PA0_CHANNEL);
 
-      if (pa0 < THRESHOLD) { //low detected
+      if (pa0 < THRESHOLD_TIM7) { //low detected
          consecutive_lows_2 = consecutive_lows_2 + 1;
          consecutive_highs_2 = 0;
          if (consecutive_lows_2 > 4 && is_rearmed_2) { //low/ball detected for 20 ms straight
@@ -285,6 +287,7 @@ void TIM7_IRQHandler(void) {
       if (goals_detected_2 > 9) { //check if game is finished
          disable_interrupts();
          victory_lap(&(GPIOA->ODR));
+         center_rods();
          goals_detected_2 = 0;
          is_game_done_2 = true;
       }
@@ -830,8 +833,6 @@ void disable_interrupts() {
    NVIC_DisableIRQ(TIM14_IRQn);
    NVIC_DisableIRQ(USART3_8_IRQn);
    NVIC_DisableIRQ(TIM6_IRQn);
-
-   center_rods();
 }
 
 
@@ -843,7 +844,7 @@ int main(void) {
    //THIS WILL BE ON FOR FINAL PRODUCT
    enable_ports();
    init_adc();
-   init_tim2();
+   //init_tim2();
    init_tim7();
 
    //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[9 + '0']) << 1);
