@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include "commands.h"
 #include <stdbool.h>
+#include <math.h>
 
 void nano_wait(unsigned int);
 //void game(void);
@@ -51,8 +52,8 @@ void disable_interrupts(void);
 uint16_t msg[8] = { 0x0000,0x0100,0x0200,0x0300,0x0400,0x0500,0x0600,0x0700 };
 
 #define EXIT_SUCCESS 0
-#define THRESHOLD_TIM2 620 //3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
-#define THRESHOLD_TIM7 620 //3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
+#define THRESHOLD_TIM2 1000 //620 //620 //3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
+#define THRESHOLD_TIM7 1000 //620 //620 //3500 //THRESHOLD = Vmeasured_analog / Vref * (2^12 - 1) = 3 / 3.3 * 4095 = 3723 which is roughly 3500 (2.82V). threshold is a digital value for comparison
 #define PC0_CHANNEL ADC_CHSELR_CHSEL10
 #define PA0_CHANNEL ADC_CHSELR_CHSEL0
 
@@ -135,6 +136,33 @@ void init_adc(void) {
    GPIOA->BSRR = ((uint16_t)(font['0']) << 1) & 0x1FE;  // set new segment bits
 }
 
+
+/*volatile uint8_t adc_busy = false;
+
+uint16_t read_adc(uint32_t channel) {
+   while (adc_busy) {
+   }
+   adc_busy = true;
+
+   while (ADC1->CR & ADC_CR_ADSTART) {
+   }
+   //Select requested channel
+   ADC1->CHSELR = channel;
+
+   //Start conversion
+   ADC1->CR |= ADC_CR_ADSTART;
+
+   //Wait for conversion complete
+   while (!(ADC1->ISR & ADC_ISR_EOC)) {
+   }
+
+   //Read and return result
+   uint16_t val = ADC1->DR;
+   adc_busy = false;
+
+   return val;
+}*/
+
 uint16_t read_adc(uint32_t channel) {
    while (ADC1->CR & ADC_CR_ADSTART) {
    }
@@ -197,7 +225,7 @@ void TIM2_IRQHandler(void) {
       if (pc0 < THRESHOLD_TIM2) { //low detected
          consecutive_lows = consecutive_lows + 1;
          consecutive_highs = 0;
-         if (consecutive_lows > 4 && is_rearmed) { //low/ball detected for 20 ms straight
+         if (consecutive_lows > 2 && is_rearmed) { //low/ball detected for 3 ms straight
             goals_detected = goals_detected + 1;
             consecutive_lows = 0;
             consecutive_highs = 0;
@@ -238,6 +266,7 @@ void init_tim2(void) {
    TIM2->CR1 |= TIM_CR1_CEN;
 
    NVIC_EnableIRQ(TIM2_IRQn);
+   //NVIC_SetPriority(TIM2_IRQn, 3);
 }
 
 volatile uint8_t consecutive_lows_2 = 0; //number of times/ms in a row that the ball was detected
@@ -265,7 +294,7 @@ void TIM7_IRQHandler(void) {
       if (pa0 < THRESHOLD_TIM7) { //low detected
          consecutive_lows_2 = consecutive_lows_2 + 1;
          consecutive_highs_2 = 0;
-         if (consecutive_lows_2 > 4 && is_rearmed_2) { //low/ball detected for 20 ms straight
+         if (consecutive_lows_2 > 2 && is_rearmed_2) { //low/ball detected for 3 ms straight
             goals_detected_2 = goals_detected_2 + 1;
             consecutive_lows_2 = 0;
             consecutive_highs_2 = 0;
@@ -306,6 +335,7 @@ void init_tim7(void) {
    TIM7->CR1 |= TIM_CR1_CEN;
 
    NVIC_EnableIRQ(TIM7_IRQn);
+   //NVIC_SetPriority(TIM7_IRQn, 3);
 }
 
 
@@ -400,6 +430,25 @@ void init_tim3(void) {
    NVIC_SetPriority(TIM3_IRQn, 2);
 }
 
+/*void spin_motor1(int degrees) {
+   int sign = (degrees > 0) - (degrees < 0);
+   num_pulses1 = 0;
+
+   if (round(-0.0002 * pow(degrees, 2) + 0.1283 * degrees * sign + 0.5286) < 0) {
+      pulse_target1 = 0; 
+   }
+   else {
+      pulse_target1 = round(-0.0002 * pow(degrees, 2) + 0.1283 * degrees * sign + 0.5286);
+   }
+
+   if (sign < 0) {
+      clockwise1 = true;
+   }
+   else {
+      clockwise1 = false;
+   }
+}*/
+
 void spin_motor1(int degrees) {
    int sign = (degrees > 0) - (degrees < 0);
    num_pulses1 = 0;
@@ -418,7 +467,6 @@ void spin_motor1(int degrees) {
       clockwise1 = false;
    }
 }
-
 
 
 volatile uint16_t pulse_target2 = 0;
@@ -843,14 +891,10 @@ int main(void) {
    //TEST SCORING SYSTEM
    //THIS WILL BE ON FOR FINAL PRODUCT
    enable_ports();
+
    init_adc();
    init_tim2();
    init_tim7();
-
-   //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[9 + '0']) << 1);
-   //GPIOC->ODR = (GPIOC->ODR & 0xfe01) | ((uint16_t)(font[goals_detected + '0']) << 1);
-   
-
    
    //Rotation Motors
    //THIS WILL BE ON FOR FINAL PRODUCT
@@ -858,6 +902,7 @@ int main(void) {
    init_tim3(); //rotational 1
    init_tim14(); //rotational 2
       
+   
    init_usart5(); //also enables USART3_8  //good
    init_tim6();                            //good
    init_usart1(); //linear 1               //good
@@ -870,15 +915,13 @@ int main(void) {
    tic_energize(USART1); //linear 1        //good
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
-
-   //spin_motor1(-100000);
-   //spin_motor2(-100000);
-
-   //tic_set_target_position(USART1, -5000);
-   //tic_set_target_position(USART3, -5000);
-   //nano_wait(100000000);
    
    //center_rods();
+
+   //spin_motor1(-90); 
+
+   //spin_motor1(-90); 
+   //spin_motor2(-90); 
 
    /*
    spin_motor1(-10000000); //rotational motor with lin motor 2 (2)
@@ -928,8 +971,8 @@ int main(void) {
    nano_wait(100000000);
    tic_exit_safe_start(USART1); //linear 1 //good
    tic_exit_safe_start(USART3);
-   nano_wait(10000);
-   */
+   nano_wait(10000);*/
+   
    
 
    //tic_set_target_position(USART1, 5000); //[5000, -4350]!!! //closest lin motor (0)
