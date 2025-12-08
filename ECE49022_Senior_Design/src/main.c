@@ -860,7 +860,7 @@ int main(void) {
       
    init_usart5(); //also enables USART3_8  //good
    init_tim6();                            //good
-   init_usart1(); //linear 1               //good
+   //init_usart1(); //linear 1               //good
    init_usart3(); //linear 2
    //nano_wait(50000);
    tic_exit_safe_start(USART1); //linear 1 //good
@@ -870,6 +870,9 @@ int main(void) {
    tic_energize(USART1); //linear 1        //good
    tic_energize(USART3); //linear 2 
    nano_wait(100000);
+
+   spin_motor1(-100000);
+   spin_motor2(-100000);
 
    //tic_set_target_position(USART1, -5000);
    //tic_set_target_position(USART3, -5000);
