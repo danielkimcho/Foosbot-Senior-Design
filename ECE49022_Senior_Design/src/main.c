@@ -360,6 +360,7 @@ volatile bool clockwise1 = false;
 volatile bool is_rotating1 = false;
 volatile bool is_stopping1 = false;
 volatile uint16_t countdown1 = -1;
+#define COUNTDOWN1 5 //5
 
 void TIM3_IRQHandler(void) {
    TIM3->SR &= ~TIM_SR_UIF;
@@ -377,7 +378,7 @@ void TIM3_IRQHandler(void) {
    }
    else if (countdown1 == 0) {
       is_stopping1 = false;
-      countdown1 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
+      countdown1 = COUNTDOWN1; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
       //countdown1 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
       //GPIOC->ODR = 0x0000; //FIX
       GPIOC->BSRR = ((1 << 9) | (1 << 10)) << 16;   // reset PC9, PC10
@@ -396,7 +397,7 @@ void TIM3_IRQHandler(void) {
       //GPIOC->ODR = 0x0600; //FIX
       GPIOC->BSRR = (1 << 9) | (1 << 10);           // set PC9, set PC10
       is_stopping1 = true;
-      countdown1 = 5; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
+      countdown1 = COUNTDOWN1; //(uint16_t)((5000000ULL * 48000000ULL) / ((TIM3->PSC + 1) * (TIM3->ARR + 1) * 1000000000ULL));
       //countdown1 = (5000000UL / (1000000000UL) * (48000000UL / (TIM3->PSC + 1) / (TIM3->ARR + 1)));
       //nano_wait(5000000);
       //nano_wait(500000);
@@ -430,15 +431,16 @@ void init_tim3(void) {
    NVIC_SetPriority(TIM3_IRQn, 2);
 }
 
-/*void spin_motor1(int degrees) {
+/*
+void spin_motor1(int degrees) {
    int sign = (degrees > 0) - (degrees < 0);
    num_pulses1 = 0;
 
-   if (round(-0.0002 * pow(degrees, 2) + 0.1283 * degrees * sign + 0.5286) < 0) {
+   if (2.4 * round(-0.0002 * pow(degrees, 2) + 0.1283 * degrees * sign + 0.5286) < 0) {
       pulse_target1 = 0; 
    }
    else {
-      pulse_target1 = round(-0.0002 * pow(degrees, 2) + 0.1283 * degrees * sign + 0.5286);
+      pulse_target1 = round(2.4 * (-0.0002 * pow(degrees, 2) + 0.1283 * degrees * sign + 0.5286));
    }
 
    if (sign < 0) {
@@ -447,6 +449,13 @@ void init_tim3(void) {
    else {
       clockwise1 = false;
    }
+}*/
+
+/*
+void spin_motor1(int degrees) {
+   num_pulses1 = 0;
+   pulse_target1 = 27;
+   clockwise1 = true;
 }*/
 
 void spin_motor1(int degrees) {
@@ -476,6 +485,7 @@ volatile bool clockwise2 = false;
 volatile bool is_rotating2 = false;
 volatile bool is_stopping2 = false;
 volatile uint16_t countdown2 = -1;
+#define COUNTDOWN2 5 //5
 
 void TIM14_IRQHandler(void) {
    TIM14->SR &= ~TIM_SR_UIF;
@@ -512,7 +522,7 @@ void TIM14_IRQHandler(void) {
       //GPIOB->ODR = 0x0003; //FIX
       GPIOB->BSRR = (1 << 0) | (1 << 1);            // set PB0, set PB1
       is_stopping2 = true;
-      countdown2 = 5;
+      countdown2 = COUNTDOWN2;
       //nano_wait(5000000);
       //nano_wait(500000);
       //GPIOB->ODR = 0x0002;
@@ -522,7 +532,7 @@ void TIM14_IRQHandler(void) {
       //GPIOB->ODR = 0x0001; //FIX
       GPIOB->BSRR = ((1 << 1) << 16) | (1 << 0);    // reset PB1, set PB0
       is_stopping2 = true;
-      countdown2 = 5;
+      countdown2 = COUNTDOWN2;
       //nano_wait(5000000);
       //nano_wait(500000);
       //GPIOB->ODR = 0x0000;
@@ -543,6 +553,32 @@ void init_tim14(void) {
    NVIC_EnableIRQ(TIM14_IRQn);
    NVIC_SetPriority(TIM14_IRQn, 2);
 }
+
+/*
+void spin_motor2(int degrees) {
+   num_pulses2 = 0;
+   pulse_target2 = 21; 
+   clockwise2 = true;
+}*/
+
+/*void spin_motor2(int degrees) {
+   int sign = (degrees > 0) - (degrees < 0);
+   num_pulses2 = 0;
+
+   if (2.4 * (round(-0.0002 * pow(degrees, 2) + 0.1283 * degrees * sign + 0.5286)) < 0) {
+      pulse_target2 = 0; 
+   }
+   else {
+      pulse_target2 = round(2.4 * (-0.0002 * pow(degrees, 2) + 0.1283 * degrees * sign + 0.5286));
+   }
+
+   if (sign < 0) {
+      clockwise2 = true;
+   }
+   else {
+      clockwise2 = false;
+   }
+}*/
 
 void spin_motor2(int degrees) {
    int sign = (degrees > 0) - (degrees < 0);
@@ -918,18 +954,46 @@ int main(void) {
    
    //center_rods();
 
-   //spin_motor1(-90); 
+   //spin_motor1(-360); 
+   //tic_set_target_position(USART1, -4600); //[5000, -4350]!!! //closest lin motor (0)
+
+   //spin_motor2(-100000); 
 
    //spin_motor1(-90); 
    //spin_motor2(-90); 
+   /*spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);
+   spin_motor1(-360); 
+   nano_wait(800000000);*/
 
-   /*
-   spin_motor1(-10000000); //rotational motor with lin motor 2 (2)
-   spin_motor2(-10000000); //rotational motor with lin motor 1 (3)
+
+   
+   //spin_motor1(-10000000); //rotational motor with lin motor 2 (2)
+   //spin_motor2(-10000000); //rotational motor with lin motor 1 (3)
    //tic_set_target_position(USART1, -5000);
    //tic_set_target_position(USART3, -5000);
    
-   
+   /*
    tic_set_target_position(USART1, -5000); //[5000, -4350]!!! //closest lin motor (0)
    tic_set_target_position(USART3, -5000); 
    nano_wait(100000000);
@@ -938,41 +1002,41 @@ int main(void) {
    nano_wait(10000);
    tic_set_target_position(USART1, 5000); //closest lin motor (0)
    tic_set_target_position(USART3, 5000);
-   nano_wait(100000000);
+   nano_wait(1000000000);
    tic_exit_safe_start(USART1); //linear 1 //good
    tic_exit_safe_start(USART3);
    nano_wait(10000);
    tic_set_target_position(USART1, -5000); //[5000, -4350]!!! //closest lin motor (0)
    tic_set_target_position(USART3, -5000);
-   nano_wait(100000000);
+   nano_wait(1000000000);
    tic_exit_safe_start(USART1); //linear 1 //good
    tic_exit_safe_start(USART3);
    nano_wait(10000);
    tic_set_target_position(USART1, 5000); //closest lin motor (0)
    tic_set_target_position(USART3, 5000);
-   nano_wait(100000000);
+   nano_wait(1000000000);
    tic_exit_safe_start(USART1); //linear 1 //good
    tic_exit_safe_start(USART3);
    nano_wait(10000);
    tic_set_target_position(USART1, -5000); //[5000, -4350]!!! //closest lin motor (0)
    tic_set_target_position(USART3, -5000);
-   nano_wait(100000000);
+   nano_wait(1000000000);
    tic_exit_safe_start(USART1); //linear 1 //good
    tic_exit_safe_start(USART3);
    nano_wait(10000);
    tic_set_target_position(USART1, 5000); //closest lin motor (0)
    tic_set_target_position(USART3, 5000);
-   nano_wait(100000000);
+   nano_wait(1000000000);
    tic_exit_safe_start(USART1); //linear 1 //good
    tic_exit_safe_start(USART3);
    nano_wait(10000);
    tic_set_target_position(USART1, -5000); //[5000, -4350]!!! //closest lin motor (0)
    tic_set_target_position(USART3, -5000);
-   nano_wait(100000000);
+   nano_wait(1000000000);
    tic_exit_safe_start(USART1); //linear 1 //good
    tic_exit_safe_start(USART3);
-   nano_wait(10000);*/
-   
+   nano_wait(10000);
+   */
    
 
    //tic_set_target_position(USART1, 5000); //[5000, -4350]!!! //closest lin motor (0)
