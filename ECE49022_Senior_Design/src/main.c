@@ -239,7 +239,7 @@ void TIM2_IRQHandler(void) {
       else { //high detected
          consecutive_lows = 0;
          consecutive_highs = consecutive_highs + 1;
-         if (consecutive_highs > 19) { //high/no ball detected for 20ms straight
+         if (consecutive_highs > 49) { //high/no ball detected for 20ms straight
             is_rearmed = true;
          }
       }
@@ -308,7 +308,7 @@ void TIM7_IRQHandler(void) {
       else { //high detected
          consecutive_lows_2 = 0;
          consecutive_highs_2 = consecutive_highs_2 + 1;
-         if (consecutive_highs_2 > 19) { //high/no ball detected for 20ms straight
+         if (consecutive_highs_2 > 49) { //high/no ball detected for 20ms straight
             is_rearmed_2 = true;
          }
       }
